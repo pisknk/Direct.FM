@@ -1,0 +1,26 @@
+#!/bin/sh
+# Thanks opa334 for this
+ROOT_PREFIX=""
+ARCH=$(dpkg --print-architecture)
+if [ "$ARCH" = "iphoneos-arm" ]; then
+   if [ -L "/var/jb" ]; then
+      # get symlink target
+      # xina support
+      destination=$(readlink -f /var/jb)
+      if [ "$destination" != "/jb" ]; then
+         ROOT_PREFIX="$destination"
+      fi
+   fi
+else
+   ROOT_PREFIX="/var/jb"
+fi
+
+chown root:wheel $ROOT_PREFIX/Library/LaunchDaemons/fr.rootfs.scrubble.plist
+chmod 644 $ROOT_PREFIX/Library/LaunchDaemons/fr.rootfs.scrubble.plist
+
+chown root:wheel $ROOT_PREFIX/usr/local/libexec/Scrubble
+chmod 755 $ROOT_PREFIX/usr/local/libexec/Scrubble
+
+launchctl load $ROOT_PREFIX/Library/LaunchDaemons/fr.rootfs.scrubble.plist 2> /dev/null
+
+exit 0

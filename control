@@ -1,0 +1,9 @@
+Package: fr.rootfs.scrubble
+Name: Scrubble
+Version: 1.0
+Architecture: iphoneos-arm
+Description: iOS tool to Scrobble your music to last.fm
+Maintainer: rootfs
+Author: rootfs
+Section: Tweaks
+Depends: gawk, preferenceloader, com.opa334.altlist

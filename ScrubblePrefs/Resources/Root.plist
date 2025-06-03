@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>items</key>
+	<array>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>label</key>
+			<string>Enabled</string>
+			<key>key</key>
+			<string>enabled</string>
+			<key>defaults</key>
+			<string>fr.rootfs.scrubbleprefs</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Credentials</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>key</key>
+			<string>username</string>
+			<key>defaults</key>
+			<string>fr.rootfs.scrubbleprefs</string>
+			<key>label</key>
+			<string>Username:</string>
+			<key>PostNotification</key>
+	        <string>fr.rootfs.scrubbleprefs-updated</string>
+			<key>id</key>
+			<string>username</string>	
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSecureEditTextCell</string>
+			<key>key</key>
+			<string>password</string>
+			<key>defaults</key>
+			<string>fr.rootfs.scrubbleprefs</string>
+			<key>label</key>
+			<string>Password:</string>
+			<key>PostNotification</key>
+	        <string>fr.rootfs.scrubbleprefs-updated</string>
+			<key>id</key>
+			<string>password</string>	
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>API</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>key</key>
+			<string>apiKey</string>
+			<key>defaults</key>
+			<string>fr.rootfs.scrubbleprefs</string>
+			<key>label</key>
+			<string>API Key:</string>
+			<key>PostNotification</key>
+	        <string>fr.rootfs.scrubbleprefs-updated</string>
+			<key>id</key>
+			<string>apiKey</string>	
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSecureEditTextCell</string>
+			<key>key</key>
+			<string>apiSecret</string>
+			<key>defaults</key>
+			<string>fr.rootfs.scrubbleprefs</string>
+			<key>label</key>
+			<string>API Secret:</string>
+			<key>PostNotification</key>
+	        <string>fr.rootfs.scrubbleprefs-updated</string>
+			<key>id</key>
+			<string>apiSecret</string>	
+		</dict>
+			<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Get an API key</string>
+			<key>url</key>
+			<string>https://www.last.fm/api/account/create</string>
+			<key>action</key>
+			<string>open:</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+		</dict>
+
+		<dict>
+            <key>cell</key>
+            <string>PSButtonCell</string>
+            <key>label</key>
+            <string>Test login</string>
+            <key>action</key>
+            <string>testLogin</string>
+        </dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Scrobbling</string>
+			<key>footerText</key>
+			<string>Delay in percentage after which the track is scrobbled to last.fm</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSLinkListCell</string>
+			<key>detail</key>
+			<string>ATLApplicationListMultiSelectionController</string>
+			<key>cellClass</key>
+			<string>ATLApplicationSelectionCell</string>
+			<key>defaults</key>
+			<string>fr.rootfs.scrubbleprefs</string>
+			<key>key</key>
+			<string>enabledApplications</string>
+			<key>label</key>
+			<string>Enabled Application</string>
+			<key>sections</key>
+			<array>
+				<dict>
+					<key>sectionType</key>
+					<string>Visible</string>
+				</dict>
+			</array>
+			<key>useSearchBar</key>
+			<true/>
+			<key>hideSearchBarWhileScrolling</key>
+			<false/>
+			<key>PostNotification</key>
+	        <string>fr.rootfs.scrubbleprefs-updated</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSSliderCell</string>
+			<key>key</key>
+			<string>scrobbleAfter</string>
+			<key>defaults</key>
+			<string>fr.rootfs.scrubbleprefs</string>
+			<key>default</key>
+			<real>0.7</real>
+			<key>min</key>
+			<integer>0</integer>
+			<key>max</key>
+			<integer>1</integer>
+			<key>showValue</key>
+			<true/>
+			<key>PostNotification</key>
+	        <string>fr.rootfs.scrubbleprefs-updated</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Status</string>
+		</dict>
+
+        <dict>
+            <key>cell</key>
+            <string>PSTitleValueCell</string>
+            <key>label</key>
+            <string>Scrubble status</string>
+            <key>get</key>
+            <string>daemonStatus:</string>
+			<key>id</key>
+			<string>daemonStatus</string>			
+        </dict>
+
+		<dict>
+            <key>cell</key>
+            <string>PSButtonCell</string>
+            <key>label</key>
+            <string>Check Scrubble status</string>
+            <key>action</key>
+            <string>reloadDaemonStatus</string>
+        </dict>
+		<dict>
+            <key>cell</key>
+            <string>PSButtonCell</string>
+            <key>action</key>
+            <string>toggleDaemon</string>
+			<key>id</key>
+			<string>daemonToggle</string>
+			<key>label</key>
+            <string>Loading...</string>
+        </dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Links</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Source Code</string>
+			<key>url</key>
+			<string>https://github.com/R00tFS/Scrubble</string>
+			<key>action</key>
+			<string>open:</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Follow me on X (Twitter)</string>
+			<key>url</key>
+			<string>https://x.com/rootfsdev</string>
+			<key>action</key>
+			<string>open:</string>
+		</dict>
+	</array>
+	<key>title</key>
+	<string>Scrubble</string>
+</dict>
+</plist>
