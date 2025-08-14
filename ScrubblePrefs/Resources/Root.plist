@@ -122,47 +122,22 @@
 
 		<dict>
 			<key>cell</key>
-			<string>PSSwitchCell</string>
-			<key>default</key>
-			<true/>
+			<string>PSTitleValueCell</string>
 			<key>label</key>
-			<string>Apple Music</string>
-			<key>key</key>
-			<string>enableAppleMusic</string>
-			<key>defaults</key>
-			<string>fr.rootfs.scrubbleprefs</string>
-			<key>PostNotification</key>
-			<string>fr.rootfs.scrubbleprefs-updated</string>
+			<string>Selected Apps</string>
+			<key>get</key>
+			<string>getSelectedAppsDisplay:</string>
+			<key>id</key>
+			<string>selectedAppsDisplay</string>
 		</dict>
 		
 		<dict>
 			<key>cell</key>
-			<string>PSSwitchCell</string>
-			<key>default</key>
-			<true/>
+			<string>PSButtonCell</string>
 			<key>label</key>
-			<string>Spotify</string>
-			<key>key</key>
-			<string>enableSpotify</string>
-			<key>defaults</key>
-			<string>fr.rootfs.scrubbleprefs</string>
-			<key>PostNotification</key>
-			<string>fr.rootfs.scrubbleprefs-updated</string>
-		</dict>
-		
-		<dict>
-			<key>cell</key>
-			<string>PSSwitchCell</string>
-			<key>default</key>
-			<true/>
-			<key>label</key>
-			<string>YouTube Music</string>
-			<key>key</key>
-			<string>enableYouTubeMusic</string>
-			<key>defaults</key>
-			<string>fr.rootfs.scrubbleprefs</string>
-			<key>PostNotification</key>
-			<string>fr.rootfs.scrubbleprefs-updated</string>
+			<string>Choose Apps to Scrobble</string>
+			<key>action</key>
+			<string>showAppPicker</string>
 		</dict>
 
 		<dict>
@@ -188,16 +163,27 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
-			<string>Debugging</string>
+			<string>Status</string>
 			<key>footerText</key>
-			<string>Debug information to help troubleshoot scrobbling issues</string>
+			<string>Current scrobbling status and debug information</string>
 		</dict>
+
+        <dict>
+            <key>cell</key>
+            <string>PSTitleValueCell</string>
+            <key>label</key>
+            <string>Daemon Status</string>
+            <key>get</key>
+            <string>daemonStatus:</string>
+			<key>id</key>
+			<string>daemonStatus</string>			
+        </dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSTitleValueCell</string>
 			<key>label</key>
-			<string>Number of Scrobbled tracks</string>
+			<string>Total Scrobbles</string>
 			<key>get</key>
 			<string>getScrobbleCount:</string>
 			<key>id</key>
@@ -208,7 +194,7 @@
 			<key>cell</key>
 			<string>PSTitleValueCell</string>
 			<key>label</key>
-			<string>Last scrobbled track</string>
+			<string>Last Scrobbled</string>
 			<key>get</key>
 			<string>getLastScrobbledTrack:</string>
 			<key>id</key>
@@ -219,7 +205,7 @@
 			<key>cell</key>
 			<string>PSTitleValueCell</string>
 			<key>label</key>
-			<string>Current playing app</string>
+			<string>Current App</string>
 			<key>get</key>
 			<string>getCurrentPlayingApp:</string>
 			<key>id</key>
@@ -227,40 +213,22 @@
 		</dict>
 
 		<dict>
-			<key>cell</key>
-			<string>PSButtonCell</string>
-			<key>label</key>
-			<string>Reset scrobble counter</string>
-			<key>action</key>
-			<string>resetScrobbleCount</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>Status</string>
-		</dict>
-
-        <dict>
-            <key>cell</key>
-            <string>PSTitleValueCell</string>
-            <key>label</key>
-            <string>Scrubble status</string>
-            <key>get</key>
-            <string>daemonStatus:</string>
-			<key>id</key>
-			<string>daemonStatus</string>			
-        </dict>
-
-		<dict>
             <key>cell</key>
             <string>PSButtonCell</string>
             <key>label</key>
-            <string>Check Scrubble status</string>
+            <string>Check Full Scrobble Status</string>
             <key>action</key>
-            <string>reloadDaemonStatus</string>
+            <string>checkScrobbleStatus</string>
         </dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Reset Debug Counter</string>
+			<key>action</key>
+			<string>resetScrobbleCount</string>
+		</dict>
 		<dict>
             <key>cell</key>
             <string>PSButtonCell</string>

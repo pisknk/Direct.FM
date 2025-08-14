@@ -37,15 +37,27 @@ void updatePrefs() {
 	NSString *password = [prefs objectForKey:@"password"];
 	float scrobbleAfter = [prefs objectForKey:@"scrobbleAfter"] ? [[prefs objectForKey:@"scrobbleAfter"] floatValue] : 0.7;
 	
-	// Build enabled apps array from individual toggle switches
+	// Get enabled apps array from new format, with fallback to old individual toggles
+	NSArray *selectedApps = [prefs arrayForKey:@"selectedApps"];
 	NSMutableArray *apps = [[NSMutableArray alloc] init];
-	BOOL enableAppleMusic = [prefs objectForKey:@"enableAppleMusic"] ? [[prefs objectForKey:@"enableAppleMusic"] boolValue] : YES;
-	BOOL enableSpotify = [prefs objectForKey:@"enableSpotify"] ? [[prefs objectForKey:@"enableSpotify"] boolValue] : YES;
-	BOOL enableYouTubeMusic = [prefs objectForKey:@"enableYouTubeMusic"] ? [[prefs objectForKey:@"enableYouTubeMusic"] boolValue] : YES;
 	
-	if (enableAppleMusic) [apps addObject:@"com.apple.Music"];
-	if (enableSpotify) [apps addObject:@"com.spotify.client"];
-	if (enableYouTubeMusic) [apps addObject:@"com.google.ios.youtubemusic"];
+	if (selectedApps && selectedApps.count > 0) {
+		// use new format
+		[apps addObjectsFromArray:selectedApps];
+	} else {
+		// fallback to old individual toggle switches for migration
+		BOOL enableAppleMusic = [prefs objectForKey:@"enableAppleMusic"] ? [[prefs objectForKey:@"enableAppleMusic"] boolValue] : YES;
+		BOOL enableSpotify = [prefs objectForKey:@"enableSpotify"] ? [[prefs objectForKey:@"enableSpotify"] boolValue] : YES;
+		BOOL enableYouTubeMusic = [prefs objectForKey:@"enableYouTubeMusic"] ? [[prefs objectForKey:@"enableYouTubeMusic"] boolValue] : YES;
+		
+		if (enableAppleMusic) [apps addObject:@"com.apple.Music"];
+		if (enableSpotify) [apps addObject:@"com.spotify.client"];
+		if (enableYouTubeMusic) [apps addObject:@"com.google.ios.youtubemusic"];
+		
+		// save migrated settings
+		[prefs setObject:[apps copy] forKey:@"selectedApps"];
+		[prefs synchronize];
+	}
 	
 	NSLog(@"[Scrubble] Enabled apps: %@", apps);
 	
