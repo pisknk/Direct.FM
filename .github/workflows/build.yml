@@ -71,18 +71,30 @@ jobs:
         # Update deployment target in the Makefile
         sed -i '' 's/^TARGET = .*$/TARGET = iphone:clang:14.5:14.0/' Makefile
         
-        make package
+        # Remove test preferences from aggregate.mk to skip building them
+        sed -i '' '/SUBPROJECTS/d' Makefile
+        
+        # Build only the framework
+        make DEBUG=0 FINALPACKAGE=1
         
         # Extract framework from the deb
         ar -x packages/*.deb data.tar.gz
         tar -xf data.tar.gz
         
         # Copy framework to Theos lib directory
-        cp -R Library/Frameworks/AltList.framework $THEOS/lib/
+        mkdir -p $THEOS/lib/Frameworks
+        cp -R Library/Frameworks/AltList.framework $THEOS/lib/Frameworks/
+        
+        # Create symlink for backward compatibility
+        ln -sf $THEOS/lib/Frameworks/AltList.framework $THEOS/lib/AltList.framework
+        
         cd ..
         rm -rf AltList
         
         # Verify framework installation
+        echo "Framework in lib/Frameworks:"
+        ls -la $THEOS/lib/Frameworks/AltList.framework
+        echo "Framework symlink in lib:"
         ls -la $THEOS/lib/AltList.framework
         
     - name: build tweak
