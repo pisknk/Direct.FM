@@ -40,13 +40,37 @@ jobs:
         # setup frameworks directory
         mkdir -p $THEOS/lib
         
+    - name: setup ios sdk
+      run: |
+        export THEOS=$HOME/theos
+        
+        # download ios sdk using sparse checkout from official theos sdks
+        git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/
+        cd sdks
+        git sparse-checkout set --no-cone iPhoneOS14.5.sdk
+        git checkout
+        mkdir -p $THEOS/sdks
+        mv *.sdk $THEOS/sdks/
+        cd ..
+        rm -rf sdks
+        
+        # verify sdk installation
+        ls -la $THEOS/sdks/
+        ls -la $THEOS/sdks/iPhoneOS14.5.sdk/
+        
     - name: setup frameworks
       run: |
         export THEOS=$HOME/theos
+        export PATH=$THEOS/bin:$PATH
+        export THEOS_LIBRARY_PATH=$THEOS/lib
         
         # Download and setup AltList framework
         git clone --quiet --depth=1 https://github.com/opa334/AltList.git
         cd AltList
+        
+        # Update deployment target in the Makefile
+        sed -i '' 's/^TARGET = .*$/TARGET = iphone:clang:14.5:14.0/' Makefile
+        
         make package
         
         # Extract framework from the deb
@@ -61,27 +85,11 @@ jobs:
         # Verify framework installation
         ls -la $THEOS/lib/AltList.framework
         
-    - name: setup ios sdk
-      run: |
-        export THEOS=$HOME/theos
-        
-        # download ios sdk using sparse checkout from official theos sdks
-        git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/
-        cd sdks
-        git sparse-checkout set --no-cone iPhoneOS14.5.sdk
-        git checkout
-        mv *.sdk $THEOS/sdks/
-        cd ..
-        rm -rf sdks
-        
-        # verify sdk installation
-        ls -la $THEOS/sdks/
-        ls -la $THEOS/sdks/iPhoneOS14.5.sdk/
-        
     - name: build tweak
       run: |
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
+        export THEOS_LIBRARY_PATH=$THEOS/lib
         
         # build the main tool for rootless jailbreaks (dopamine, palera1n, etc.)
         cd $GITHUB_WORKSPACE
