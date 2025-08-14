@@ -35,7 +35,10 @@ jobs:
           libzip-dev \
           pkg-config \
           cmake \
-          ninja-build
+          ninja-build \
+          libc6-dev \
+          libstdc++6 \
+          zlib1g-dev
         
         # set theos environment variables
         export THEOS=$HOME/theos
@@ -87,8 +90,35 @@ jobs:
         sudo apt-get install -y clang lld
         
         # download and install ldid for code signing
-        curl -LO https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_2.1.5-procursus7_amd64.deb
-        sudo dpkg -i ldid_2.1.5-procursus7_amd64.deb
+        # try multiple sources for ldid installation
+        echo "installing ldid for code signing..."
+        
+        # method 1: try to install from ubuntu repositories
+        sudo apt-get install -y ldid || echo "ldid not available in ubuntu repos"
+        
+        # method 2: try to install from procursus
+        if ! command -v ldid &> /dev/null; then
+          echo "trying procursus ldid..."
+          curl -LO https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_linux_x86_64
+          chmod +x ldid_linux_x86_64
+          sudo mv ldid_linux_x86_64 /usr/local/bin/ldid
+        fi
+        
+        # method 3: build from source if other methods fail
+        if ! command -v ldid &> /dev/null; then
+          echo "building ldid from source..."
+          sudo apt-get install -y build-essential cmake libssl-dev
+          git clone https://github.com/ProcursusTeam/ldid.git
+          cd ldid
+          cmake .
+          make
+          sudo make install
+          cd ..
+          rm -rf ldid
+        fi
+        
+        # verify ldid installation
+        ldid --version || echo "ldid installation failed"
         
         # verify theos installation
         $THEOS/bin/nic --version || echo "theos not fully configured yet"
