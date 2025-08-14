@@ -129,6 +129,8 @@
 			<string>getSelectedAppsDisplay:</string>
 			<key>id</key>
 			<string>selectedAppsDisplay</string>
+			<key>action</key>
+			<string>showSelectedAppsPopup</string>
 		</dict>
 		
 		<dict>

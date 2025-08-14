@@ -335,41 +335,46 @@ NSString *queryString(NSDictionary *items) {
 
 // app picker methods
 - (void)showAppPicker {
-    self.availableApps = [self getInstalledMusicApps];
+    SCRUBAppPickerListController *appPicker = [[SCRUBAppPickerListController alloc] init];
+    appPicker.availableApps = [self getInstalledMusicApps];
+    appPicker.selectedAppBundleIDs = [self.selectedAppBundleIDs mutableCopy];
+    appPicker.parentController = self;
     
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Select Music Apps" 
-                                                                   message:@"Choose which apps you want to scrobble from:" 
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    
-    // add checkboxes for each available app
-    for (NSDictionary *appInfo in self.availableApps) {
-        NSString *bundleID = appInfo[@"bundleID"];
-        NSString *appName = appInfo[@"name"];
-        BOOL isSelected = [self.selectedAppBundleIDs containsObject:bundleID];
-        
-        UIAlertAction *action = [UIAlertAction actionWithTitle:[NSString stringWithFormat:@"%@ %@", isSelected ? @"✓" : @"○", appName]
-                                                         style:UIAlertActionStyleDefault
-                                                       handler:^(UIAlertAction * _Nonnull action) {
-            if ([self.selectedAppBundleIDs containsObject:bundleID]) {
-                [self.selectedAppBundleIDs removeObject:bundleID];
-            } else {
-                [self.selectedAppBundleIDs addObject:bundleID];
-            }
-            
-            // save and show picker again
-            [self saveSelectedApps];
-            [self showAppPicker];
-        }];
-        [alert addAction:action];
+    [self.navigationController pushViewController:appPicker animated:YES];
+}
+
+- (void)showSelectedAppsPopup {
+    if (!self.selectedAppBundleIDs || self.selectedAppBundleIDs.count == 0) {
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"No Apps Selected" 
+                                                                       message:@"You haven't selected any apps to scrobble from yet. Tap 'Choose Apps to Scrobble' to select apps." 
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
+        [alert addAction:okAction];
+        [self presentViewController:alert animated:YES completion:nil];
+        return;
     }
     
-    UIAlertAction *doneAction = [UIAlertAction actionWithTitle:@"Done" style:UIAlertActionStyleCancel handler:^(UIAlertAction * _Nonnull action) {
-        [self saveSelectedApps];
-        // refresh the selected apps display
-        [self reloadSpecifier:[self specifierForID:@"selectedAppsDisplay"]];
-    }];
-    [alert addAction:doneAction];
+    NSMutableArray *appNames = [[NSMutableArray alloc] init];
+    for (NSString *bundleID in self.selectedAppBundleIDs) {
+        [appNames addObject:[self getAppNameFromBundleID:bundleID]];
+    }
     
+    NSString *appList = [appNames componentsJoinedByString:@"\n• "];
+    NSString *message = [NSString stringWithFormat:@"Currently scrobbling from these apps:\n\n• %@", appList];
+    
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Selected Apps" 
+                                                                   message:message 
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    
+    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
+    UIAlertAction *editAction = [UIAlertAction actionWithTitle:@"Edit Selection" 
+                                                         style:UIAlertActionStyleDefault 
+                                                       handler:^(UIAlertAction * _Nonnull action) {
+        [self showAppPicker];
+    }];
+    
+    [alert addAction:okAction];
+    [alert addAction:editAction];
     [self presentViewController:alert animated:YES completion:nil];
 }
 
@@ -483,6 +488,184 @@ NSString *queryString(NSDictionary *items) {
     } else {
         return [NSString stringWithFormat:@"%@, and %lu more", [[appNames subarrayWithRange:NSMakeRange(0, 2)] componentsJoinedByString:@", "], (unsigned long)(appNames.count - 2)];
     }
+}
+
+@end
+
+// implementation of app picker controller
+@implementation SCRUBAppPickerListController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"Select Apps";
+    
+    // add done button
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone 
+                                                                                           target:self 
+                                                                                           action:@selector(donePressed)];
+}
+
+- (void)donePressed {
+    [self saveSelectedApps];
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (NSArray *)specifiers {
+    if (!_specifiers) {
+        NSMutableArray *specs = [[NSMutableArray alloc] init];
+        
+        // header
+        PSSpecifier *headerSpec = [PSSpecifier preferenceSpecifierNamed:@"" 
+                                                                  target:nil 
+                                                                     set:nil 
+                                                                     get:nil 
+                                                                  detail:nil 
+                                                                    cell:PSGroupCell 
+                                                                    edit:nil];
+        [headerSpec setProperty:@"Select which music apps you want to scrobble from:" forKey:@"footerText"];
+        [specs addObject:headerSpec];
+        
+        // get available apps
+        self.availableApps = [self getInstalledMusicApps];
+        
+        // create toggle for each app
+        for (NSDictionary *appInfo in self.availableApps) {
+            NSString *bundleID = appInfo[@"bundleID"];
+            NSString *appName = appInfo[@"name"];
+            
+            PSSpecifier *appSpec = [PSSpecifier preferenceSpecifierNamed:appName 
+                                                                  target:self 
+                                                                     set:@selector(setAppEnabled:forSpecifier:) 
+                                                                     get:@selector(getAppEnabled:) 
+                                                                  detail:nil 
+                                                                    cell:PSSwitchCell 
+                                                                    edit:nil];
+            [appSpec setProperty:bundleID forKey:@"bundleID"];
+            [appSpec setProperty:@YES forKey:@"default"];
+            [specs addObject:appSpec];
+        }
+        
+        _specifiers = [specs copy];
+    }
+    return _specifiers;
+}
+
+- (id)getAppEnabled:(PSSpecifier *)specifier {
+    NSString *bundleID = [specifier propertyForKey:@"bundleID"];
+    return @([self.selectedAppBundleIDs containsObject:bundleID]);
+}
+
+- (void)setAppEnabled:(id)value forSpecifier:(PSSpecifier *)specifier {
+    NSString *bundleID = [specifier propertyForKey:@"bundleID"];
+    BOOL enabled = [value boolValue];
+    
+    if (enabled) {
+        if (![self.selectedAppBundleIDs containsObject:bundleID]) {
+            [self.selectedAppBundleIDs addObject:bundleID];
+        }
+    } else {
+        [self.selectedAppBundleIDs removeObject:bundleID];
+    }
+}
+
+- (void)saveSelectedApps {
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    [defaults setObject:self.selectedAppBundleIDs forKey:@"selectedApps"];
+    [defaults synchronize];
+    
+    // notify daemon of changes
+    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("fr.rootfs.scrubbleprefs-updated"), NULL, NULL, YES);
+    
+    // refresh parent controller
+    if (self.parentController) {
+        [self.parentController reloadSpecifier:[self.parentController specifierForID:@"selectedAppsDisplay"]];
+    }
+}
+
+- (NSArray *)getInstalledMusicApps {
+    NSMutableArray *musicApps = [[NSMutableArray alloc] init];
+    
+    // known music apps with their bundle ids and display names
+    NSDictionary *knownApps = @{
+        @"com.apple.Music": @"Apple Music",
+        @"com.spotify.client": @"Spotify",
+        @"com.google.ios.youtubemusic": @"YouTube Music",
+        @"com.pandora": @"Pandora",
+        @"com.amazon.mp3": @"Amazon Music",
+        @"com.soundcloud.TouchApp": @"SoundCloud",
+        @"com.aspiro.tidal": @"TIDAL",
+        @"com.deezer.Deezer": @"Deezer",
+        @"com.apple.podcasts": @"Apple Podcasts",
+        @"com.overcast.overcast-ios": @"Overcast",
+        @"fm.last.scrobbler": @"Last.fm",
+        @"com.bandcamp.client": @"Bandcamp"
+    };
+    
+    // try to check which apps are actually installed using runtime loading to avoid linking issues
+    Class LSApplicationWorkspaceClass = objc_getClass("LSApplicationWorkspace");
+    if (LSApplicationWorkspaceClass) {
+        id workspace = [LSApplicationWorkspaceClass performSelector:@selector(defaultWorkspace)];
+        if (workspace) {
+            for (NSString *bundleID in knownApps.allKeys) {
+                @try {
+                    BOOL isInstalled = NO;
+                    if ([workspace respondsToSelector:@selector(applicationIsInstalled:)]) {
+                        isInstalled = [[workspace performSelector:@selector(applicationIsInstalled:) withObject:bundleID] boolValue];
+                    }
+                    if (isInstalled) {
+                        [musicApps addObject:@{@"bundleID": bundleID, @"name": knownApps[bundleID]}];
+                    }
+                } @catch (NSException *exception) {
+                    // if detection fails, we'll fall back to showing all apps
+                    NSLog(@"[Scrubble] App detection failed for %@: %@", bundleID, exception.reason);
+                }
+            }
+        }
+    }
+    
+    // if detection failed or no apps were found, include all known apps
+    if (musicApps.count == 0) {
+        NSLog(@"[Scrubble] App detection failed, showing all known apps");
+        for (NSString *bundleID in knownApps.allKeys) {
+            [musicApps addObject:@{@"bundleID": bundleID, @"name": knownApps[bundleID]}];
+        }
+    }
+    
+    // always ensure the default three are included
+    NSArray *defaultApps = @[@"com.apple.Music", @"com.spotify.client", @"com.google.ios.youtubemusic"];
+    for (NSString *bundleID in defaultApps) {
+        BOOL alreadyAdded = NO;
+        for (NSDictionary *app in musicApps) {
+            if ([app[@"bundleID"] isEqualToString:bundleID]) {
+                alreadyAdded = YES;
+                break;
+            }
+        }
+        if (!alreadyAdded) {
+            [musicApps addObject:@{@"bundleID": bundleID, @"name": knownApps[bundleID]}];
+        }
+    }
+    
+    return [musicApps copy];
+}
+
+- (NSString *)getAppNameFromBundleID:(NSString *)bundleID {
+    NSDictionary *knownApps = @{
+        @"com.apple.Music": @"Apple Music",
+        @"com.spotify.client": @"Spotify",
+        @"com.google.ios.youtubemusic": @"YouTube Music",
+        @"com.pandora": @"Pandora",
+        @"com.amazon.mp3": @"Amazon Music",
+        @"com.soundcloud.TouchApp": @"SoundCloud",
+        @"com.aspiro.tidal": @"TIDAL",
+        @"com.deezer.Deezer": @"Deezer",
+        @"com.apple.podcasts": @"Apple Podcasts",
+        @"com.overcast.overcast-ios": @"Overcast",
+        @"fm.last.scrobbler": @"Last.fm",
+        @"com.bandcamp.client": @"Bandcamp"
+    };
+    
+    return knownApps[bundleID] ?: bundleID;
 }
 
 @end
