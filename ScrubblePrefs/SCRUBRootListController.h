@@ -15,7 +15,7 @@
 @interface SCRUBAppPickerListController : PSListController
 @property (strong, nonatomic) NSArray *availableApps;
 @property (strong, nonatomic) NSMutableArray *selectedAppBundleIDs;
-@property (weak, nonatomic) SCRUBRootListController *rootController;
+@property (weak, nonatomic) SCRUBRootListController *scrubbleRootController;
 - (NSArray *)getInstalledMusicApps;
 - (NSString *)getAppNameFromBundleID:(NSString *)bundleID;
 - (void)saveSelectedApps;

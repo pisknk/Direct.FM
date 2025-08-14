@@ -338,7 +338,7 @@ NSString *queryString(NSDictionary *items) {
     SCRUBAppPickerListController *appPicker = [[SCRUBAppPickerListController alloc] init];
     appPicker.availableApps = [self getInstalledMusicApps];
     appPicker.selectedAppBundleIDs = [self.selectedAppBundleIDs mutableCopy];
-    appPicker.rootController = self;
+    appPicker.scrubbleRootController = self;
     
     [self.navigationController pushViewController:appPicker animated:YES];
 }
@@ -577,8 +577,8 @@ NSString *queryString(NSDictionary *items) {
     CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("fr.rootfs.scrubbleprefs-updated"), NULL, NULL, YES);
     
     // refresh parent controller
-    if (self.rootController) {
-        [self.rootController reloadSpecifier:[self.rootController specifierForID:@"selectedAppsDisplay"]];
+    if (self.scrubbleRootController) {
+        [self.scrubbleRootController reloadSpecifier:[self.scrubbleRootController specifierForID:@"selectedAppsDisplay"]];
     }
 }
 
