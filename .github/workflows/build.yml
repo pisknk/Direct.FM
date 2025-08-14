@@ -68,22 +68,24 @@ jobs:
         git clone --quiet --depth=1 https://github.com/opa334/AltList.git
         cd AltList
         
-        # Update deployment target in the Makefile
-        sed -i '' 's/^TARGET = .*$/TARGET = iphone:clang:14.5:14.0/' Makefile
+        # set deployment target and architecture; force arm64e and iOS 14.0+
+        sed -i '' 's/^TARGET = .*$/TARGET = iphone:clang:14.5:14.0/' Makefile || true
+        sed -i '' 's/^ARCHS *=.*$/ARCHS = arm64e/' Makefile || true
         
-        # Remove test preferences from aggregate.mk to skip building them
-        sed -i '' '/SUBPROJECTS/d' Makefile
+        # do not build subprojects (skip AltListTestPreferences)
+        sed -i '' '/^SUBPROJECTS/d' Makefile || true
         
-        # Build only the framework
-        make DEBUG=0 FINALPACKAGE=1
+        # build the framework without packaging; this produces the framework in .theos/obj
+        make clean all DEBUG=0 FINALPACKAGE=0 ARCHS=arm64e TARGET=iphone:clang:14.5:14.0
         
-        # Extract framework from the deb
-        ar -x packages/*.deb data.tar.gz
-        tar -xf data.tar.gz
-        
-        # Copy framework to Theos lib directory
+        # locate built framework and copy to Theos lib directory
         mkdir -p $THEOS/lib/Frameworks
-        cp -R Library/Frameworks/AltList.framework $THEOS/lib/Frameworks/
+        BUILT_FW_PATH=$(find .theos -type d -name 'AltList.framework' -print -quit)
+        if [ -z "$BUILT_FW_PATH" ]; then
+          echo "AltList.framework not found in build outputs" >&2
+          exit 1
+        fi
+        cp -R "$BUILT_FW_PATH" $THEOS/lib/Frameworks/
         
         # Create symlink for backward compatibility
         ln -sf $THEOS/lib/Frameworks/AltList.framework $THEOS/lib/AltList.framework
@@ -105,7 +107,7 @@ jobs:
         
         # build the main tool for rootless jailbreaks (dopamine, palera1n, etc.)
         cd $GITHUB_WORKSPACE
-        make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1
+        make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1 ARCHS=arm64e TARGET=iphone:clang:14.5:14.0
         
         # list built artifacts
         ls -la packages/
@@ -124,7 +126,7 @@ jobs:
         export THEOS_LIBRARY_PATH=$THEOS/lib
         
         cd $GITHUB_WORKSPACE/ScrubblePrefs
-        make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1
+        make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1 ARCHS=arm64e TARGET=iphone:clang:14.5:14.0
         
         # list built preference bundle
         ls -la packages/
