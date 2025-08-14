@@ -37,6 +37,30 @@ jobs:
         THEOS_PLATFORM_SDK_ROOT = $THEOS/sdks
         EOF
         
+        # setup frameworks directory
+        mkdir -p $THEOS/lib
+        
+    - name: setup frameworks
+      run: |
+        export THEOS=$HOME/theos
+        
+        # Download and setup AltList framework
+        git clone --quiet --depth=1 https://github.com/opa334/AltList.git
+        cd AltList
+        make package
+        
+        # Extract framework from the deb
+        ar -x packages/*.deb data.tar.gz
+        tar -xf data.tar.gz
+        
+        # Copy framework to Theos lib directory
+        cp -R Library/Frameworks/AltList.framework $THEOS/lib/
+        cd ..
+        rm -rf AltList
+        
+        # Verify framework installation
+        ls -la $THEOS/lib/AltList.framework
+        
     - name: setup ios sdk
       run: |
         export THEOS=$HOME/theos
@@ -61,7 +85,7 @@ jobs:
         
         # build the main tool for rootless jailbreaks (dopamine, palera1n, etc.)
         cd $GITHUB_WORKSPACE
-        make package THEOS_PACKAGE_SCHEME=rootless
+        make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1
         
         # list built artifacts
         ls -la packages/
@@ -77,9 +101,10 @@ jobs:
       run: |
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
+        export THEOS_LIBRARY_PATH=$THEOS/lib
         
         cd $GITHUB_WORKSPACE/ScrubblePrefs
-        make package THEOS_PACKAGE_SCHEME=rootless
+        make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1
         
         # list built preference bundle
         ls -la packages/
