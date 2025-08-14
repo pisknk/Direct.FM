@@ -84,6 +84,13 @@ NSString *queryString(NSDictionary *items) {
 
 	[self requestLastfm:dict completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error) {
 		NSLog(@"[Scrubble] Scrobbled track %@", music);
+		
+		// Update debug information
+		NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+		NSInteger currentCount = [defaults integerForKey:@"scrobbleCount"];
+		[defaults setInteger:currentCount + 1 forKey:@"scrobbleCount"];
+		[defaults setObject:[NSString stringWithFormat:@"%@ - %@", artist, music] forKey:@"lastScrobbledTrack"];
+		[defaults synchronize];
 	}];
 }
 
@@ -152,7 +159,25 @@ NSString *queryString(NSDictionary *items) {
 	if (![[[notification userInfo] objectForKey:@"_MROriginatingNotification"] isEqualToString:@"_kMRNowPlayingPlaybackQueueChangedNotification"]) return;
 	
 	NSString *appBID = [[[notification userInfo] objectForKey:@"kMRNowPlayingClientUserInfoKey"] bundleIdentifier];
-	if (![self.selectedApps containsObject:appBID]) return;
+	
+	// Update current playing app debug info
+	NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+	NSString *appName = @"Unknown";
+	if ([appBID isEqualToString:@"com.apple.Music"]) appName = @"Apple Music";
+	else if ([appBID isEqualToString:@"com.spotify.client"]) appName = @"Spotify";
+	else if ([appBID isEqualToString:@"com.google.ios.youtubemusic"]) appName = @"YouTube Music";
+	else appName = [NSString stringWithFormat:@"Other (%@)", appBID];
+	
+	[defaults setObject:appName forKey:@"currentPlayingApp"];
+	[defaults synchronize];
+	
+	NSLog(@"[Scrubble] Music changed from app: %@ (%@)", appName, appBID);
+	NSLog(@"[Scrubble] Selected apps: %@", self.selectedApps);
+	
+	if (![self.selectedApps containsObject:appBID]) {
+		NSLog(@"[Scrubble] App %@ not in selected apps, ignoring", appBID);
+		return;
+	}
 
 	[self getCurrentlyPlayingMusicWithcompletionHandler:^(NSString *track, NSString *artist, NSString *album, NSDate *date, NSNumber *duration){
 		[self updateNowPlaying:track withArtist:artist album:album];

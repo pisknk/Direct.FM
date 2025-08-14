@@ -36,7 +36,19 @@ void updatePrefs() {
 	NSString *username = [prefs objectForKey:@"username"];
 	NSString *password = [prefs objectForKey:@"password"];
 	float scrobbleAfter = [prefs objectForKey:@"scrobbleAfter"] ? [[prefs objectForKey:@"scrobbleAfter"] floatValue] : 0.7;
-	NSArray *apps = [prefs objectForKey:@"enabledApplications"];
+	
+	// Build enabled apps array from individual toggle switches
+	NSMutableArray *apps = [[NSMutableArray alloc] init];
+	BOOL enableAppleMusic = [prefs objectForKey:@"enableAppleMusic"] ? [[prefs objectForKey:@"enableAppleMusic"] boolValue] : YES;
+	BOOL enableSpotify = [prefs objectForKey:@"enableSpotify"] ? [[prefs objectForKey:@"enableSpotify"] boolValue] : YES;
+	BOOL enableYouTubeMusic = [prefs objectForKey:@"enableYouTubeMusic"] ? [[prefs objectForKey:@"enableYouTubeMusic"] boolValue] : YES;
+	
+	if (enableAppleMusic) [apps addObject:@"com.apple.Music"];
+	if (enableSpotify) [apps addObject:@"com.spotify.client"];
+	if (enableYouTubeMusic) [apps addObject:@"com.google.ios.youtubemusic"];
+	
+	NSLog(@"[Scrubble] Enabled apps: %@", apps);
+	
 	if (!apiKey || !apiSecret || !username || !password || !enabled) enabled = NO;
 	else initScrobbler(apiKey, apiSecret, username, password, scrobbleAfter, apps);
 }
