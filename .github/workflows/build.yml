@@ -54,13 +54,30 @@ jobs:
         mkdir -p $THEOS/sdks
         cd $THEOS/sdks
         
-        # download ios sdk from a public source
-        # using a community-maintained sdk repository
-        wget -O iPhoneOS.sdk.tar.xz "https://github.com/xybp888/iOS-SDKs/raw/master/iPhoneOS14.5.sdk.tar.xz"
-        tar -xf iPhoneOS.sdk.tar.xz
+        # download ios sdk from the community repository
+        # the sdk is stored as individual files, so we need to clone the repo
+        git clone --depth 1 --filter=blob:none --sparse https://github.com/xybp888/iOS-SDKs.git temp-sdk
+        cd temp-sdk
+        git sparse-checkout set iPhoneOS14.5.sdk
+        cp -r iPhoneOS14.5.sdk ../iPhoneOS14.5.sdk
+        cd ..
+        rm -rf temp-sdk
         
         # verify sdk installation
         ls -la $THEOS/sdks/
+        ls -la $THEOS/sdks/iPhoneOS14.5.sdk/
+        
+        # if the sdk wasn't downloaded properly, try alternative method
+        if [ ! -d "$THEOS/sdks/iPhoneOS14.5.sdk/System" ]; then
+          echo "fallback: downloading sdk as zip archive"
+          cd $THEOS/sdks
+          rm -rf iPhoneOS14.5.sdk
+          wget -O sdk.zip "https://github.com/xybp888/iOS-SDKs/archive/refs/heads/master.zip"
+          unzip sdk.zip
+          mv iOS-SDKs-master/iPhoneOS14.5.sdk .
+          rm -rf iOS-SDKs-master sdk.zip
+          ls -la $THEOS/sdks/iPhoneOS14.5.sdk/
+        fi
         
     - name: setup toolchain
       run: |
