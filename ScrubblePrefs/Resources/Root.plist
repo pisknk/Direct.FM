@@ -188,6 +188,57 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
+			<string>Debugging</string>
+			<key>footerText</key>
+			<string>Debug information to help troubleshoot scrobbling issues</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSTitleValueCell</string>
+			<key>label</key>
+			<string>Number of Scrobbled tracks</string>
+			<key>get</key>
+			<string>getScrobbleCount:</string>
+			<key>id</key>
+			<string>scrobbleCount</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSTitleValueCell</string>
+			<key>label</key>
+			<string>Last scrobbled track</string>
+			<key>get</key>
+			<string>getLastScrobbledTrack:</string>
+			<key>id</key>
+			<string>lastScrobbledTrack</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSTitleValueCell</string>
+			<key>label</key>
+			<string>Current playing app</string>
+			<key>get</key>
+			<string>getCurrentPlayingApp:</string>
+			<key>id</key>
+			<string>currentPlayingApp</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Reset scrobble counter</string>
+			<key>action</key>
+			<string>resetScrobbleCount</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
 			<string>Status</string>
 		</dict>
 

@@ -150,4 +150,43 @@ NSString *queryString(NSDictionary *items) {
 	}] resume];
 }
 
+// debugging methods
+- (NSString*)getScrobbleCount:(PSSpecifier*)sender {
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSInteger count = [defaults integerForKey:@"scrobbleCount"];
+    return [NSString stringWithFormat:@"%ld", (long)count];
+}
+
+- (NSString*)getLastScrobbledTrack:(PSSpecifier*)sender {
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSString *lastTrack = [defaults stringForKey:@"lastScrobbledTrack"];
+    return lastTrack ?: @"None";
+}
+
+- (NSString*)getCurrentPlayingApp:(PSSpecifier*)sender {
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSString *currentApp = [defaults stringForKey:@"currentPlayingApp"];
+    return currentApp ?: @"None detected";
+}
+
+- (void)resetScrobbleCount {
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    [defaults setInteger:0 forKey:@"scrobbleCount"];
+    [defaults removeObjectForKey:@"lastScrobbledTrack"];
+    [defaults removeObjectForKey:@"currentPlayingApp"];
+    [defaults synchronize];
+    
+    // refresh the debug section
+    [self reloadSpecifier:[self specifierForID:@"scrobbleCount"]];
+    [self reloadSpecifier:[self specifierForID:@"lastScrobbledTrack"]];
+    [self reloadSpecifier:[self specifierForID:@"currentPlayingApp"]];
+    
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Debug Info Reset" 
+                                                                   message:@"Scrobble counter and debug info have been reset." 
+                                                            preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
+    [alert addAction:okAction];
+    [self presentViewController:alert animated:YES completion:nil];
+}
+
 @end
