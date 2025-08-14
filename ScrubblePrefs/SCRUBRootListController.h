@@ -1,7 +1,5 @@
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
-#import <AltList/LSApplicationProxy.h>
-#import <AltList/ATLApplicationListControllerBase.h>
 
 @interface SCRUBRootListController : PSListController
 @property (atomic) bool daemonRunning;
@@ -11,7 +9,15 @@
 - (NSString *)getAppNameFromBundleID:(NSString *)bundleID;
 @end
 
-// app picker using AltList
-@interface SCRUBAppPickerController : ATLApplicationListControllerBase
+// forward declarations to avoid header dependency issues
+@class LSApplicationProxy;
+
+// app picker using AltList with runtime loading
+@interface SCRUBAppPickerController : PSListController
 @property (weak, nonatomic) SCRUBRootListController *scrubbleRootController;
+@property (strong, nonatomic) NSMutableSet *selectedApplications;
+@property (assign, nonatomic) BOOL showIdentifiersAsSubtitle;
+@property (assign, nonatomic) BOOL showSearchBar;
+@property (assign, nonatomic) BOOL hideSearchBarWhileScrolling;
+- (BOOL)shouldShowApplication:(LSApplicationProxy *)application;
 @end

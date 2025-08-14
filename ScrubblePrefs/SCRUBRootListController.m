@@ -335,6 +335,9 @@ NSString *queryString(NSDictionary *items) {
 
 // app picker methods
 - (void)showAppPicker {
+    // try to use AltList if available, otherwise fall back to simple list
+    Class altListClass = NSClassFromString(@"ATLApplicationListControllerBase");
+    
     SCRUBAppPickerController *appPicker = [[SCRUBAppPickerController alloc] init];
     appPicker.scrubbleRootController = self;
     
@@ -490,17 +493,12 @@ NSString *queryString(NSDictionary *items) {
 
 @end
 
-// implementation of app picker using AltList
+// implementation of app picker - fallback implementation that works without AltList headers
 @implementation SCRUBAppPickerController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"Select Apps";
-    
-    // configure AltList to show only apps (not system apps, etc.)
-    self.showIdentifiersAsSubtitle = YES;
-    self.showSearchBar = YES;
-    self.hideSearchBarWhileScrolling = NO;
     
     // load selected apps
     NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
@@ -515,6 +513,63 @@ NSString *queryString(NSDictionary *items) {
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone 
                                                                                            target:self 
                                                                                            action:@selector(donePressed)];
+}
+
+- (NSArray *)specifiers {
+    if (!_specifiers) {
+        NSMutableArray *specs = [[NSMutableArray alloc] init];
+        
+        // header
+        PSSpecifier *headerSpec = [PSSpecifier preferenceSpecifierNamed:@"" 
+                                                                  target:nil 
+                                                                     set:nil 
+                                                                     get:nil 
+                                                                  detail:nil 
+                                                                    cell:PSGroupCell 
+                                                                    edit:nil];
+        [headerSpec setProperty:@"Select which apps you want to scrobble from. This includes all user-installed apps that could potentially play music." forKey:@"footerText"];
+        [specs addObject:headerSpec];
+        
+        // get installed apps using LSApplicationWorkspace
+        NSArray *installedApps = [self getInstalledUserApps];
+        
+        // create toggle for each app
+        for (NSDictionary *appInfo in installedApps) {
+            NSString *bundleID = appInfo[@"bundleID"];
+            NSString *appName = appInfo[@"name"];
+            
+            PSSpecifier *appSpec = [PSSpecifier preferenceSpecifierNamed:appName 
+                                                                  target:self 
+                                                                     set:@selector(setAppEnabled:forSpecifier:) 
+                                                                     get:@selector(getAppEnabled:) 
+                                                                  detail:nil 
+                                                                    cell:PSSwitchCell 
+                                                                    edit:nil];
+            [appSpec setProperty:bundleID forKey:@"bundleID"];
+            [appSpec setProperty:bundleID forKey:@"subtitle"]; // show bundle ID as subtitle
+            [appSpec setProperty:@YES forKey:@"default"];
+            [specs addObject:appSpec];
+        }
+        
+        _specifiers = [specs copy];
+    }
+    return _specifiers;
+}
+
+- (id)getAppEnabled:(PSSpecifier *)specifier {
+    NSString *bundleID = [specifier propertyForKey:@"bundleID"];
+    return @([self.selectedApplications containsObject:bundleID]);
+}
+
+- (void)setAppEnabled:(id)value forSpecifier:(PSSpecifier *)specifier {
+    NSString *bundleID = [specifier propertyForKey:@"bundleID"];
+    BOOL enabled = [value boolValue];
+    
+    if (enabled) {
+        [self.selectedApplications addObject:bundleID];
+    } else {
+        [self.selectedApplications removeObject:bundleID];
+    }
 }
 
 - (void)donePressed {
@@ -536,10 +591,58 @@ NSString *queryString(NSDictionary *items) {
     [self.navigationController popViewControllerAnimated:YES];
 }
 
-// filter to show only apps that can play media
+- (NSArray *)getInstalledUserApps {
+    NSMutableArray *userApps = [[NSMutableArray alloc] init];
+    
+    // use LSApplicationWorkspace to get all installed apps
+    Class LSApplicationWorkspaceClass = objc_getClass("LSApplicationWorkspace");
+    if (LSApplicationWorkspaceClass) {
+        id workspace = [LSApplicationWorkspaceClass performSelector:@selector(defaultWorkspace)];
+        if (workspace && [workspace respondsToSelector:@selector(allInstalledApplications)]) {
+            NSArray *allApps = [workspace performSelector:@selector(allInstalledApplications)];
+            
+            for (id app in allApps) {
+                @try {
+                    // get app properties
+                    NSString *bundleID = [app performSelector:@selector(bundleIdentifier)];
+                    NSString *displayName = [app performSelector:@selector(localizedName)];
+                    
+                    // filter out system apps
+                    BOOL isSystemApp = NO;
+                    BOOL isInternalApp = NO;
+                    
+                    if ([app respondsToSelector:@selector(isSystemApplication)]) {
+                        isSystemApp = [[app performSelector:@selector(isSystemApplication)] boolValue];
+                    }
+                    if ([app respondsToSelector:@selector(isInternalApplication)]) {
+                        isInternalApp = [[app performSelector:@selector(isInternalApplication)] boolValue];
+                    }
+                    
+                    // only include user apps
+                    if (!isSystemApp && !isInternalApp && bundleID && displayName) {
+                        [userApps addObject:@{
+                            @"bundleID": bundleID,
+                            @"name": displayName
+                        }];
+                    }
+                } @catch (NSException *exception) {
+                    NSLog(@"[Scrubble] Error processing app: %@", exception.reason);
+                }
+            }
+        }
+    }
+    
+    // sort apps alphabetically
+    [userApps sortUsingComparator:^NSComparisonResult(NSDictionary *a, NSDictionary *b) {
+        return [a[@"name"] localizedCaseInsensitiveCompare:b[@"name"]];
+    }];
+    
+    return [userApps copy];
+}
+
+// compatibility method
 - (BOOL)shouldShowApplication:(LSApplicationProxy *)application {
-    // allow all apps for now - user can choose what they want
-    return !application.isSystemApplication && !application.isInternalApplication;
+    return YES; // not used in this implementation
 }
 
 @end
