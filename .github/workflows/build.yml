@@ -1,0 +1,115 @@
+name: Build Jailbreak Tweak (Rootless)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v4
+      
+    - name: setup theos
+      run: |
+        # install theos dependencies
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          git \
+          perl \
+          curl \
+          wget \
+          unzip \
+          libplist-utils \
+          libplist-dev \
+          libimobiledevice-dev \
+          libusbmuxd-dev \
+          libssl-dev \
+          libxml2-dev \
+          libzip-dev \
+          pkg-config \
+          cmake \
+          ninja-build
+        
+        # set theos environment variables
+        export THEOS=$HOME/theos
+        echo "THEOS=$THEOS" >> $GITHUB_ENV
+        echo "export THEOS=$THEOS" >> $GITHUB_ENV
+        echo "export PATH=$THEOS/bin:$PATH" >> $GITHUB_ENV
+        
+        # clone theos
+        git clone --recursive https://github.com/theos/theos.git $THEOS
+        
+    - name: setup ios sdk
+      run: |
+        export THEOS=$HOME/theos
+        
+        # create sdks directory
+        mkdir -p $THEOS/sdks
+        cd $THEOS/sdks
+        
+        # download ios sdk from a public source
+        # using a community-maintained sdk repository
+        wget -O iPhoneOS.sdk.tar.xz "https://github.com/xybp888/iOS-SDKs/raw/master/iPhoneOS14.5.sdk.tar.xz"
+        tar -xf iPhoneOS.sdk.tar.xz
+        
+        # verify sdk installation
+        ls -la $THEOS/sdks/
+        
+    - name: setup toolchain
+      run: |
+        export THEOS=$HOME/theos
+        
+        # install clang and lld
+        sudo apt-get install -y clang lld
+        
+        # download and install ldid for code signing
+        curl -LO https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_2.1.5-procursus7_amd64.deb
+        sudo dpkg -i ldid_2.1.5-procursus7_amd64.deb
+        
+        # verify theos installation
+        $THEOS/bin/nic --version || echo "theos not fully configured yet"
+        
+    - name: build tweak
+      run: |
+        # set theos environment
+        export THEOS=$HOME/theos
+        export PATH=$THEOS/bin:$PATH
+        
+        # build the main tool for rootless jailbreaks (dopamine, palera1n, etc.)
+        cd $GITHUB_WORKSPACE
+        make package THEOS_PACKAGE_SCHEME=rootless
+        
+        # list built artifacts
+        ls -la packages/
+        
+    - name: upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: tweak-package
+        path: packages/
+        retention-days: 30
+        
+    - name: build preferences
+      run: |
+        export THEOS=$HOME/theos
+        export PATH=$THEOS/bin:$PATH
+        
+        cd $GITHUB_WORKSPACE/ScrubblePrefs
+        make package THEOS_PACKAGE_SCHEME=rootless
+        
+        # list built preference bundle
+        ls -la packages/
+        
+    - name: upload preference artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: preferences-package
+        path: ScrubblePrefs/packages/
+        retention-days: 30
