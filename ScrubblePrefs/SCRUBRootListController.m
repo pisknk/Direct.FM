@@ -335,9 +335,6 @@ NSString *queryString(NSDictionary *items) {
 
 // app picker methods
 - (void)showAppPicker {
-    // try to use AltList if available, otherwise fall back to simple list
-    Class altListClass = NSClassFromString(@"ATLApplicationListControllerBase");
-    
     SCRUBAppPickerController *appPicker = [[SCRUBAppPickerController alloc] init];
     appPicker.scrubbleRootController = self;
     
