@@ -62,52 +62,34 @@ jobs:
       run: |
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
-        export THEOS_LIBRARY_PATH=$THEOS/lib
         
-        # Download and setup AltList framework
-        git clone --quiet --depth=1 https://github.com/opa334/AltList.git
-        cd AltList
+        # Download pre-built AltList framework from releases
+        echo "Downloading AltList framework from releases..."
+        curl -L -o altlist.deb "https://github.com/opa334/AltList/releases/latest/download/com.opa334.altlist_1.0.4_iphoneos-arm.deb"
         
-        # set deployment target and architecture; force arm64e and iOS 14.0+
-        sed -i '' 's/^TARGET = .*$/TARGET = iphone:clang:14.5:14.0/' Makefile || true
-        sed -i '' 's/^ARCHS *=.*$/ARCHS = arm64e/' Makefile || true
+        # Extract the framework from the deb
+        ar -x altlist.deb data.tar.gz
+        tar -xf data.tar.gz
         
-        # do not build subprojects (skip AltListTestPreferences)
-        sed -i '' '/^SUBPROJECTS/d' Makefile || true
-        
-        # build the framework without packaging; this produces the framework in .theos/obj
-        make clean all DEBUG=0 FINALPACKAGE=0 ARCHS=arm64e TARGET=iphone:clang:14.5:14.0
-        
-        # locate built framework and copy to multiple Theos locations
+        # Install framework in multiple locations
         mkdir -p $THEOS/lib/Frameworks
         mkdir -p $THEOS/lib
-        
-        BUILT_FW_PATH=$(find .theos -type d -name 'AltList.framework' -print -quit)
-        if [ -z "$BUILT_FW_PATH" ]; then
-          echo "AltList.framework not found in build outputs" >&2
-          find .theos -name "*AltList*" -type d
-          exit 1
-        fi
-        
-        # Copy framework to standard locations
-        cp -R "$BUILT_FW_PATH" $THEOS/lib/Frameworks/
-        cp -R "$BUILT_FW_PATH" $THEOS/lib/
-        
-        # Also copy to vendor directory for extra compatibility
         mkdir -p $THEOS/vendor/lib/Frameworks
-        cp -R "$BUILT_FW_PATH" $THEOS/vendor/lib/Frameworks/
         
-        cd ..
-        rm -rf AltList
+        # Copy framework to all standard locations
+        cp -R Library/Frameworks/AltList.framework $THEOS/lib/Frameworks/
+        cp -R Library/Frameworks/AltList.framework $THEOS/lib/
+        cp -R Library/Frameworks/AltList.framework $THEOS/vendor/lib/Frameworks/
         
-        # Verify framework installation in all locations
-        echo "Framework in lib/Frameworks:"
-        ls -la $THEOS/lib/Frameworks/AltList.framework || echo "Not found in lib/Frameworks"
-        echo "Framework in lib:"
-        ls -la $THEOS/lib/AltList.framework || echo "Not found in lib"
-        echo "Framework in vendor/lib/Frameworks:"
-        ls -la $THEOS/vendor/lib/Frameworks/AltList.framework || echo "Not found in vendor/lib/Frameworks"
-        echo "All framework locations verified"
+        # Cleanup
+        rm -f altlist.deb data.tar.gz
+        rm -rf Library
+        
+        # Verify framework installation
+        echo "Verifying AltList framework installation:"
+        ls -la $THEOS/lib/Frameworks/AltList.framework
+        ls -la $THEOS/lib/AltList.framework
+        file $THEOS/lib/AltList.framework/AltList
         
     - name: build tweak
       run: |
