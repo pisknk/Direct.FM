@@ -12,7 +12,7 @@
 #import <CommonCrypto/CommonCrypto.h>
 #import <Foundation/NSURLSession.h>
 
-// forward declaration for LSApplicationWorkspace
+// forward declaration for LSApplicationWorkspace - using objc_getClass to avoid linking issues
 @interface LSApplicationWorkspace : NSObject
 + (instancetype)defaultWorkspace;
 - (BOOL)applicationIsInstalled:(NSString *)bundleIdentifier;
@@ -401,14 +401,37 @@ NSString *queryString(NSDictionary *items) {
         @"com.bandcamp.client": @"Bandcamp"
     };
     
-    // check which apps are actually installed
-    for (NSString *bundleID in knownApps.allKeys) {
-        if ([[LSApplicationWorkspace performSelector:@selector(defaultWorkspace)] performSelector:@selector(applicationIsInstalled:) withObject:bundleID]) {
+    // try to check which apps are actually installed using runtime loading to avoid linking issues
+    Class LSApplicationWorkspaceClass = objc_getClass("LSApplicationWorkspace");
+    if (LSApplicationWorkspaceClass) {
+        id workspace = [LSApplicationWorkspaceClass performSelector:@selector(defaultWorkspace)];
+        if (workspace) {
+            for (NSString *bundleID in knownApps.allKeys) {
+                @try {
+                    BOOL isInstalled = NO;
+                    if ([workspace respondsToSelector:@selector(applicationIsInstalled:)]) {
+                        isInstalled = [[workspace performSelector:@selector(applicationIsInstalled:) withObject:bundleID] boolValue];
+                    }
+                    if (isInstalled) {
+                        [musicApps addObject:@{@"bundleID": bundleID, @"name": knownApps[bundleID]}];
+                    }
+                } @catch (NSException *exception) {
+                    // if detection fails, we'll fall back to showing all apps
+                    NSLog(@"[Scrubble] App detection failed for %@: %@", bundleID, exception.reason);
+                }
+            }
+        }
+    }
+    
+    // if detection failed or no apps were found, include all known apps
+    if (musicApps.count == 0) {
+        NSLog(@"[Scrubble] App detection failed, showing all known apps");
+        for (NSString *bundleID in knownApps.allKeys) {
             [musicApps addObject:@{@"bundleID": bundleID, @"name": knownApps[bundleID]}];
         }
     }
     
-    // always include the default three even if not detected
+    // always ensure the default three are included
     NSArray *defaultApps = @[@"com.apple.Music", @"com.spotify.client", @"com.google.ios.youtubemusic"];
     for (NSString *bundleID in defaultApps) {
         BOOL alreadyAdded = NO;
