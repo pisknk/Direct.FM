@@ -1,22 +1,17 @@
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
+#import <AltList/LSApplicationProxy.h>
+#import <AltList/ATLApplicationListControllerBase.h>
 
 @interface SCRUBRootListController : PSListController
 @property (atomic) bool daemonRunning;
-@property (strong, nonatomic) NSArray *availableApps;
 @property (strong, nonatomic) NSMutableArray *selectedAppBundleIDs;
 - (void)showAppPicker;
 - (void)showSelectedAppsPopup;
-- (NSArray *)getInstalledMusicApps;
 - (NSString *)getAppNameFromBundleID:(NSString *)bundleID;
 @end
 
-// separate controller for app selection
-@interface SCRUBAppPickerListController : PSListController
-@property (strong, nonatomic) NSArray *availableApps;
-@property (strong, nonatomic) NSMutableArray *selectedAppBundleIDs;
+// app picker using AltList
+@interface SCRUBAppPickerController : ATLApplicationListControllerBase
 @property (weak, nonatomic) SCRUBRootListController *scrubbleRootController;
-- (NSArray *)getInstalledMusicApps;
-- (NSString *)getAppNameFromBundleID:(NSString *)bundleID;
-- (void)saveSelectedApps;
 @end

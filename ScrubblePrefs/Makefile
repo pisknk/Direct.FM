@@ -7,6 +7,7 @@ BUNDLE_NAME = ScrubblePrefs
 ScrubblePrefs_FILES = SCRUBRootListController.m
 ScrubblePrefs_FRAMEWORKS = UIKit
 ScrubblePrefs_PRIVATE_FRAMEWORKS = Preferences
+ScrubblePrefs_LIBRARIES = altlist
 
 ScrubblePrefs_INSTALL_PATH = /Library/PreferenceBundles
 ScrubblePrefs_CFLAGS = -fobjc-arc -Iinclude -Wno-deprecated-declarations
