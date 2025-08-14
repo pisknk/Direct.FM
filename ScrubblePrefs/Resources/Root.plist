@@ -122,30 +122,47 @@
 
 		<dict>
 			<key>cell</key>
-			<string>PSLinkListCell</string>
-			<key>detail</key>
-			<string>ATLApplicationListMultiSelectionController</string>
-			<key>cellClass</key>
-			<string>ATLApplicationSelectionCell</string>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>label</key>
+			<string>Apple Music</string>
+			<key>key</key>
+			<string>enableAppleMusic</string>
 			<key>defaults</key>
 			<string>fr.rootfs.scrubbleprefs</string>
-			<key>key</key>
-			<string>enabledApplications</string>
-			<key>label</key>
-			<string>Enabled Application</string>
-			<key>sections</key>
-			<array>
-				<dict>
-					<key>sectionType</key>
-					<string>Visible</string>
-				</dict>
-			</array>
-			<key>useSearchBar</key>
-			<true/>
-			<key>hideSearchBarWhileScrolling</key>
-			<false/>
 			<key>PostNotification</key>
-	        <string>fr.rootfs.scrubbleprefs-updated</string>
+			<string>fr.rootfs.scrubbleprefs-updated</string>
+		</dict>
+		
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>label</key>
+			<string>Spotify</string>
+			<key>key</key>
+			<string>enableSpotify</string>
+			<key>defaults</key>
+			<string>fr.rootfs.scrubbleprefs</string>
+			<key>PostNotification</key>
+			<string>fr.rootfs.scrubbleprefs-updated</string>
+		</dict>
+		
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>label</key>
+			<string>YouTube Music</string>
+			<key>key</key>
+			<string>enableYouTubeMusic</string>
+			<key>defaults</key>
+			<string>fr.rootfs.scrubbleprefs</string>
+			<key>PostNotification</key>
+			<string>fr.rootfs.scrubbleprefs-updated</string>
 		</dict>
 
 		<dict>

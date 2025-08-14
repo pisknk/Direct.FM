@@ -58,45 +58,14 @@ jobs:
         ls -la $THEOS/sdks/
         ls -la $THEOS/sdks/iPhoneOS14.5.sdk/
         
-    - name: setup frameworks
-      run: |
-        export THEOS=$HOME/theos
-        export PATH=$THEOS/bin:$PATH
-        
-        # Download pre-built AltList framework from releases
-        echo "Downloading AltList framework from releases..."
-        curl -L -o altlist.deb "https://github.com/opa334/AltList/releases/latest/download/com.opa334.altlist_1.0.4_iphoneos-arm.deb"
-        
-        # Extract the framework from the deb
-        ar -x altlist.deb data.tar.gz
-        tar -xf data.tar.gz
-        
-        # Install framework in multiple locations
-        mkdir -p $THEOS/lib/Frameworks
-        mkdir -p $THEOS/lib
-        mkdir -p $THEOS/vendor/lib/Frameworks
-        
-        # Copy framework to all standard locations
-        cp -R Library/Frameworks/AltList.framework $THEOS/lib/Frameworks/
-        cp -R Library/Frameworks/AltList.framework $THEOS/lib/
-        cp -R Library/Frameworks/AltList.framework $THEOS/vendor/lib/Frameworks/
-        
-        # Cleanup
-        rm -f altlist.deb data.tar.gz
-        rm -rf Library
-        
-        # Verify framework installation
-        echo "Verifying AltList framework installation:"
-        ls -la $THEOS/lib/Frameworks/AltList.framework
-        ls -la $THEOS/lib/AltList.framework
-        file $THEOS/lib/AltList.framework/AltList
+    # No external frameworks needed - using standard iOS preferences only
         
     - name: build tweak
       run: |
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
-        export THEOS_LIBRARY_PATH=$THEOS/lib
-        export FRAMEWORK_SEARCH_PATHS="$THEOS/lib/Frameworks $THEOS/lib $THEOS/vendor/lib/Frameworks"
+
+
         
         # build the main tool for rootless jailbreaks (dopamine, palera1n, etc.)
         cd $GITHUB_WORKSPACE
@@ -116,8 +85,8 @@ jobs:
       run: |
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
-        export THEOS_LIBRARY_PATH=$THEOS/lib
-        export FRAMEWORK_SEARCH_PATHS="$THEOS/lib/Frameworks $THEOS/lib $THEOS/vendor/lib/Frameworks"
+
+
         
         cd $GITHUB_WORKSPACE/ScrubblePrefs
         make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1 ARCHS=arm64e TARGET=iphone:clang:14.5:14.0
