@@ -78,32 +78,43 @@ jobs:
         # build the framework without packaging; this produces the framework in .theos/obj
         make clean all DEBUG=0 FINALPACKAGE=0 ARCHS=arm64e TARGET=iphone:clang:14.5:14.0
         
-        # locate built framework and copy to Theos lib directory
+        # locate built framework and copy to multiple Theos locations
         mkdir -p $THEOS/lib/Frameworks
+        mkdir -p $THEOS/lib
+        
         BUILT_FW_PATH=$(find .theos -type d -name 'AltList.framework' -print -quit)
         if [ -z "$BUILT_FW_PATH" ]; then
           echo "AltList.framework not found in build outputs" >&2
+          find .theos -name "*AltList*" -type d
           exit 1
         fi
-        cp -R "$BUILT_FW_PATH" $THEOS/lib/Frameworks/
         
-        # Create symlink for backward compatibility
-        ln -sf $THEOS/lib/Frameworks/AltList.framework $THEOS/lib/AltList.framework
+        # Copy framework to standard locations
+        cp -R "$BUILT_FW_PATH" $THEOS/lib/Frameworks/
+        cp -R "$BUILT_FW_PATH" $THEOS/lib/
+        
+        # Also copy to vendor directory for extra compatibility
+        mkdir -p $THEOS/vendor/lib/Frameworks
+        cp -R "$BUILT_FW_PATH" $THEOS/vendor/lib/Frameworks/
         
         cd ..
         rm -rf AltList
         
-        # Verify framework installation
+        # Verify framework installation in all locations
         echo "Framework in lib/Frameworks:"
-        ls -la $THEOS/lib/Frameworks/AltList.framework
-        echo "Framework symlink in lib:"
-        ls -la $THEOS/lib/AltList.framework
+        ls -la $THEOS/lib/Frameworks/AltList.framework || echo "Not found in lib/Frameworks"
+        echo "Framework in lib:"
+        ls -la $THEOS/lib/AltList.framework || echo "Not found in lib"
+        echo "Framework in vendor/lib/Frameworks:"
+        ls -la $THEOS/vendor/lib/Frameworks/AltList.framework || echo "Not found in vendor/lib/Frameworks"
+        echo "All framework locations verified"
         
     - name: build tweak
       run: |
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
         export THEOS_LIBRARY_PATH=$THEOS/lib
+        export FRAMEWORK_SEARCH_PATHS="$THEOS/lib/Frameworks $THEOS/lib $THEOS/vendor/lib/Frameworks"
         
         # build the main tool for rootless jailbreaks (dopamine, palera1n, etc.)
         cd $GITHUB_WORKSPACE
@@ -124,6 +135,7 @@ jobs:
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
         export THEOS_LIBRARY_PATH=$THEOS/lib
+        export FRAMEWORK_SEARCH_PATHS="$THEOS/lib/Frameworks $THEOS/lib $THEOS/vendor/lib/Frameworks"
         
         cd $GITHUB_WORKSPACE/ScrubblePrefs
         make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1 ARCHS=arm64e TARGET=iphone:clang:14.5:14.0
