@@ -81,22 +81,3 @@ jobs:
         path: packages/
         retention-days: 30
         
-    - name: build preferences
-      run: |
-        export THEOS=$HOME/theos
-        export PATH=$THEOS/bin:$PATH
-
-
-        
-        cd $GITHUB_WORKSPACE/ScrubblePrefs
-        make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1 ARCHS=arm64e TARGET=iphone:clang:14.5:14.0
-        
-        # list built preference bundle
-        ls -la packages/
-        
-    - name: upload preference artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: preferences-package
-        path: ScrubblePrefs/packages/
-        retention-days: 30
