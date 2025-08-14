@@ -15,7 +15,18 @@ jobs:
     - name: checkout code
       uses: actions/checkout@v4
       
+    - name: Cache Theos
+      id: theos
+      uses: actions/cache@v4.2.3
+      env:
+        cache-name: theos_cache_67db2ab
+      with:
+        path: theos/
+        key: ${{ env.cache-name }}
+        restore-keys: ${{ env.cache-name }}
+
     - name: setup theos
+      if: steps.theos.outputs.cache-hit != 'true'
       run: |
         # install theos dependencies
         sudo apt-get update
@@ -51,8 +62,10 @@ jobs:
         echo "export THEOS_PLATFORM_SDK_ROOT=$THEOS/sdks" >> $GITHUB_ENV
         echo "export THEOS_PLATFORM_DEB_SECTION=iphoneos-arm" >> $GITHUB_ENV
         
-        # clone theos
+        # clone specific theos version known to work
         git clone --recursive https://github.com/theos/theos.git $THEOS
+        cd $THEOS
+        git checkout 67db2ab8d950910161730de77c322658ea3e6b44
         
         # create theos configuration file
         cat > $THEOS/theos.conf << EOF
@@ -62,37 +75,22 @@ jobs:
         EOF
         
     - name: setup ios sdk
+      if: steps.theos.outputs.cache-hit != 'true'
       run: |
         export THEOS=$HOME/theos
         
-        # create sdks directory
-        mkdir -p $THEOS/sdks
-        cd $THEOS/sdks
-        
-        # download ios sdk from the community repository
-        # the sdk is stored as individual files, so we need to clone the repo
-        git clone --depth 1 --filter=blob:none --sparse https://github.com/xybp888/iOS-SDKs.git temp-sdk
-        cd temp-sdk
-        git sparse-checkout set iPhoneOS14.5.sdk
-        cp -r iPhoneOS14.5.sdk ../iPhoneOS14.5.sdk
+        # download ios sdk using sparse checkout from official theos sdks
+        git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/
+        cd sdks
+        git sparse-checkout set --no-cone iPhoneOS14.5.sdk
+        git checkout
+        mv *.sdk $THEOS/sdks/
         cd ..
-        rm -rf temp-sdk
+        rm -rf sdks
         
         # verify sdk installation
         ls -la $THEOS/sdks/
         ls -la $THEOS/sdks/iPhoneOS14.5.sdk/
-        
-        # if the sdk wasn't downloaded properly, try alternative method
-        if [ ! -d "$THEOS/sdks/iPhoneOS14.5.sdk/System" ]; then
-          echo "fallback: downloading sdk as zip archive"
-          cd $THEOS/sdks
-          rm -rf iPhoneOS14.5.sdk
-          wget -O sdk.zip "https://github.com/xybp888/iOS-SDKs/archive/refs/heads/master.zip"
-          unzip sdk.zip
-          mv iOS-SDKs-master/iPhoneOS14.5.sdk .
-          rm -rf iOS-SDKs-master sdk.zip
-          ls -la $THEOS/sdks/iPhoneOS14.5.sdk/
-        fi
         
     - name: setup toolchain
       run: |
