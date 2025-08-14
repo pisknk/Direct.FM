@@ -46,8 +46,20 @@ jobs:
         echo "export THEOS=$THEOS" >> $GITHUB_ENV
         echo "export PATH=$THEOS/bin:$PATH" >> $GITHUB_ENV
         
+        # set additional theos environment variables for cross-compilation
+        echo "export THEOS_PLATFORM_NAME=linux" >> $GITHUB_ENV
+        echo "export THEOS_PLATFORM_SDK_ROOT=$THEOS/sdks" >> $GITHUB_ENV
+        echo "export THEOS_PLATFORM_DEB_SECTION=iphoneos-arm" >> $GITHUB_ENV
+        
         # clone theos
         git clone --recursive https://github.com/theos/theos.git $THEOS
+        
+        # create theos configuration file
+        cat > $THEOS/theos.conf << EOF
+        THEOS_PLATFORM_NAME = linux
+        THEOS_PLATFORM_SDK_ROOT = $THEOS/sdks
+        THEOS_PLATFORM_DEB_SECTION = iphoneos-arm
+        EOF
         
     - name: setup ios sdk
       run: |
@@ -120,6 +132,24 @@ jobs:
         # verify ldid installation
         ldid --version || echo "ldid installation failed"
         
+        # setup ios cross-compilation toolchain
+        echo "setting up ios cross-compilation toolchain..."
+        
+        # create toolchain directory structure
+        mkdir -p $THEOS/toolchain/linux/iphone/bin
+        
+        # create symlinks to system clang for cross-compilation
+        # theos expects specific toolchain paths for ios builds
+        sudo ln -sf /usr/bin/clang $THEOS/toolchain/linux/iphone/bin/clang
+        sudo ln -sf /usr/bin/clang++ $THEOS/toolchain/linux/iphone/bin/clang++
+        sudo ln -sf /usr/bin/ld $THEOS/toolchain/linux/iphone/bin/ld
+        sudo ln -sf /usr/bin/ar $THEOS/toolchain/linux/iphone/bin/ar
+        sudo ln -sf /usr/bin/ranlib $THEOS/toolchain/linux/iphone/bin/ranlib
+        sudo ln -sf /usr/bin/strip $THEOS/toolchain/linux/iphone/bin/strip
+        
+        # verify toolchain setup
+        ls -la $THEOS/toolchain/linux/iphone/bin/
+        
         # verify theos installation
         $THEOS/bin/nic --version || echo "theos not fully configured yet"
         
@@ -128,6 +158,9 @@ jobs:
         # set theos environment
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
+        export THEOS_PLATFORM_NAME=linux
+        export THEOS_PLATFORM_SDK_ROOT=$THEOS/sdks
+        export THEOS_PLATFORM_DEB_SECTION=iphoneos-arm
         
         # build the main tool for rootless jailbreaks (dopamine, palera1n, etc.)
         cd $GITHUB_WORKSPACE
@@ -147,6 +180,9 @@ jobs:
       run: |
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
+        export THEOS_PLATFORM_NAME=linux
+        export THEOS_PLATFORM_SDK_ROOT=$THEOS/sdks
+        export THEOS_PLATFORM_DEB_SECTION=iphoneos-arm
         
         cd $GITHUB_WORKSPACE/ScrubblePrefs
         make package THEOS_PACKAGE_SCHEME=rootless
