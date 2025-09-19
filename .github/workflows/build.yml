@@ -41,7 +41,7 @@ jobs:
         # setup frameworks directory
         mkdir -p $THEOS/lib
         
-    - name: setup ios 8.4 sdk
+    - name: setup ios sdk for ios 8 targeting
       run: |
         export THEOS=$HOME/theos
         
@@ -49,41 +49,29 @@ jobs:
         mkdir -p $THEOS/sdks
         cd $THEOS/sdks
         
-        echo "downloading ios 8.4 sdk..."
+        echo "downloading ios 9.3 sdk for ios 8 targeting..."
         
-        # clone specific commit that has iOS 8.4 SDK
+        # clone sdk repository
         git clone --quiet --depth=1 --branch master https://github.com/theos/sdks.git tmp
         cd tmp
         
-        # check available sdks
-        echo "available sdks:"
-        ls -la
-        
-        # try to find iOS 8.x SDK
-        if [[ -d "iPhoneOS8.4.sdk" ]]; then
-          echo "found ios 8.4 sdk"
-          mv iPhoneOS8.4.sdk ..
-        elif [[ -d "iPhoneOS8.1.sdk" ]]; then
-          echo "found ios 8.1 sdk (will use this instead)"
-          mv iPhoneOS8.1.sdk ../iPhoneOS8.4.sdk
-        else
-          echo "error: no ios 8.x sdk found"
-          echo "contents of directory:"
-          ls -la
-          exit 1
-        fi
+        # use iOS 9.3 SDK (earliest available) for iOS 8 targeting
+        echo "using ios 9.3 sdk for ios 8.0 deployment target"
+        mv iPhoneOS9.3.sdk ../iPhoneOS9.3.sdk
         
         # cleanup
         cd ..
         rm -rf tmp
         
         # verify sdk installation
-        if [[ -d "iPhoneOS8.4.sdk" ]]; then
+        if [[ -d "iPhoneOS9.3.sdk" ]]; then
           echo "sdk installation successful"
           echo "sdk contents:"
-          ls -la iPhoneOS8.4.sdk/
+          ls -la iPhoneOS9.3.sdk/
           echo "private frameworks:"
-          ls -la iPhoneOS8.4.sdk/System/Library/PrivateFrameworks/ || echo "private frameworks directory not found"
+          ls -la iPhoneOS9.3.sdk/System/Library/PrivateFrameworks/ | head -10
+          echo "mediaremote framework:"
+          ls -la iPhoneOS9.3.sdk/System/Library/PrivateFrameworks/MediaRemote.framework/ || echo "mediaremote not found"
         else
           echo "error: sdk verification failed"
           echo "contents of sdks directory:"
@@ -194,10 +182,11 @@ jobs:
         
     - name: build summary
       run: |
-        echo "## Build Summary for iOS 8.4.1" >> $GITHUB_STEP_SUMMARY
-        echo "- **Target:** iphone:clang:8.4:8.0" >> $GITHUB_STEP_SUMMARY
-        echo "- **Architecture:** armv7" >> $GITHUB_STEP_SUMMARY
-        echo "- **SDK:** iPhoneOS8.4.sdk" >> $GITHUB_STEP_SUMMARY
+        echo "## Build Summary for iOS 8.4.1 Compatibility" >> $GITHUB_STEP_SUMMARY
+        echo "- **Target:** iphone:clang:9.3:8.0 (iOS 9.3 SDK targeting iOS 8.0)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Architecture:** armv7 (32-bit for iPhone 5)" >> $GITHUB_STEP_SUMMARY
+        echo "- **SDK:** iPhoneOS9.3.sdk" >> $GITHUB_STEP_SUMMARY
+        echo "- **Deployment Target:** iOS 8.0 (compatible with iOS 8.4.1)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Packages Created:" >> $GITHUB_STEP_SUMMARY
         for deb in packages/*.deb; do

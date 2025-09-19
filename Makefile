@@ -1,4 +1,4 @@
-TARGET := iphone:clang:8.4:8.0
+TARGET := iphone:clang:9.3:8.0
 ARCHS = armv7
 
 include $(THEOS)/makefiles/common.mk
@@ -10,9 +10,9 @@ Scrubble_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-variable -
 Scrubble_CODESIGN_FLAGS = -Sentitlements.plist
 Scrubble_INSTALL_PATH = /usr/local/libexec/
 
-# Link MediaRemote framework for iOS 8
-Scrubble_LDFLAGS = -F$(THEOS)/sdks/iPhoneOS8.4.sdk/System/Library/PrivateFrameworks -F$(THEOS)/sdks/iPhoneOS8.4.sdk/System/Library/Frameworks -framework MediaRemote
-ADDITIONAL_OBJCFLAGS = -I$(THEOS)/include/MediaRemote -I$(THEOS)/sdks/iPhoneOS8.4.sdk/System/Library/PrivateFrameworks/MediaRemote.framework/Headers
+# Link MediaRemote framework (using iOS 9.3 SDK with iOS 8.0 deployment target)
+Scrubble_LDFLAGS = -F$(THEOS)/sdks/iPhoneOS9.3.sdk/System/Library/PrivateFrameworks -F$(THEOS)/sdks/iPhoneOS9.3.sdk/System/Library/Frameworks -framework MediaRemote
+ADDITIONAL_OBJCFLAGS = -I$(THEOS)/include/MediaRemote -I$(THEOS)/sdks/iPhoneOS9.3.sdk/System/Library/PrivateFrameworks/MediaRemote.framework/Headers
 
 include $(THEOS_MAKE_PATH)/tool.mk
 SUBPROJECTS += ScrubblePrefs
