@@ -1,7 +1,5 @@
-TARGET := iphone:clang:latest:8.0
-
-# inherit architecture settings from parent makefile
-ARCHS ?= armv7 arm64 arm64e
+TARGET := iphone:clang:8.4:8.0
+ARCHS = armv7
 
 include $(THEOS)/makefiles/common.mk
 

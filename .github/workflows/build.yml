@@ -1,4 +1,4 @@
-name: Build Jailbreak Tweak (Multi-iOS Support)
+name: Build Jailbreak Tweak (iOS 8.4.1)
 
 on:
   push:
@@ -6,41 +6,11 @@ on:
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
-    inputs:
-      build_target:
-        description: 'Build target'
-        required: true
-        default: 'all'
-        type: choice
-        options:
-        - all
-        - ios8_32bit
-        - modern_rootless
-        - modern_rootfs
 
 jobs:
   build:
     runs-on: macos-latest
-    strategy:
-      matrix:
-        include:
-          - name: "iOS 8.4.1 (32-bit) - iPhone 5"
-            target: "iphone:clang:latest:8.0"
-            archs: "armv7"
-            scheme: "rootfs"
-            suffix: "ios8-armv7"
-          - name: "Modern iOS (Rootless) - arm64e"
-            target: "iphone:clang:14.5:14.0"
-            archs: "arm64e"
-            scheme: "rootless"
-            suffix: "modern-rootless-arm64e"
-          - name: "Modern iOS (Rootfs) - Universal"
-            target: "iphone:clang:latest:8.0"
-            archs: "armv7 arm64 arm64e"
-            scheme: "rootfs"
-            suffix: "universal-rootfs"
-    
-    name: ${{ matrix.name }}
+    name: Build for iOS 8.4.1
     
     steps:
     - name: checkout code
@@ -71,49 +41,27 @@ jobs:
         # setup frameworks directory
         mkdir -p $THEOS/lib
         
-    - name: setup ios sdk
+    - name: setup ios 8.4 sdk
       run: |
         export THEOS=$HOME/theos
         
-        # download ios 14.5 sdk (works for all targets including ios 8 with proper targeting)
-        echo "downloading ios 14.5 sdk..."
-        git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/
-        cd sdks
-        
-        # list available sdks first for debugging
-        echo "checking available sdks in repository..."
-        git ls-tree -r --name-only HEAD | grep "\.sdk" | head -10
-        
-        # download ios 14.5 sdk
-        git sparse-checkout set --no-cone iPhoneOS14.5.sdk
-        git checkout
-        
-        # create sdks directory and move sdk
+        # download ios 8.4 sdk
+        echo "downloading ios 8.4 sdk..."
         mkdir -p $THEOS/sdks
+        cd $THEOS/sdks
         
-        # check if sdk was downloaded and move it
-        if [[ -d "iPhoneOS14.5.sdk" ]]; then
-          mv iPhoneOS14.5.sdk $THEOS/sdks/
-          echo "ios 14.5 sdk installed successfully"
-        else
-          echo "error: iPhoneOS14.5.sdk not found after checkout"
-          echo "contents of current directory:"
-          ls -la
-          exit 1
-        fi
-        
-        cd ..
-        rm -rf sdks
+        # download ios 8.4 sdk from a reliable source
+        curl -L https://github.com/theos/sdks/archive/refs/heads/master.zip -o sdks.zip
+        unzip sdks.zip
+        mv sdks-master/iPhoneOS8.4.sdk .
+        rm -rf sdks.zip sdks-master
         
         # verify sdk installation
-        echo "installed sdks:"
-        ls -la $THEOS/sdks/
-        
-        if [[ -d "$THEOS/sdks/iPhoneOS14.5.sdk" ]]; then
-          echo "sdk verification successful"
-          ls -la $THEOS/sdks/iPhoneOS14.5.sdk/ | head -5
+        if [[ -d "iPhoneOS8.4.sdk" ]]; then
+          echo "ios 8.4 sdk installed successfully"
+          ls -la iPhoneOS8.4.sdk/System/Library/PrivateFrameworks/
         else
-          echo "error: sdk verification failed"
+          echo "error: ios 8.4 sdk installation failed"
           exit 1
         fi
         
@@ -184,33 +132,23 @@ jobs:
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
         
-        echo "building scrubble for ${{ matrix.name }}"
-        echo "target: ${{ matrix.target }}"
-        echo "architectures: ${{ matrix.archs }}"
-        echo "scheme: ${{ matrix.scheme }}"
-        
+        echo "building scrubble for iOS 8.4.1"
         cd $GITHUB_WORKSPACE
         
-        # build command based on scheme
-        if [[ "${{ matrix.scheme }}" == "rootless" ]]; then
-          echo "building for rootless jailbreak..."
-          make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1 ARCHS="${{ matrix.archs }}" TARGET="${{ matrix.target }}"
-        else
-          echo "building for traditional rootfs jailbreak..."
-          make package DEBUG=0 FINALPACKAGE=1 ARCHS="${{ matrix.archs }}" TARGET="${{ matrix.target }}"
-        fi
+        # build for ios 8.4.1
+        make package DEBUG=0 FINALPACKAGE=1
         
-        # rename package with suffix for identification
+        # verify build
         if [[ -d "packages" ]]; then
           echo "build successful! packages created:"
           ls -la packages/
           
-          # rename .deb files to include suffix
+          # rename package to indicate ios 8.4.1 build
           for deb in packages/*.deb; do
             if [[ -f "$deb" ]]; then
               basename=$(basename "$deb" .deb)
               dirname=$(dirname "$deb")
-              mv "$deb" "$dirname/${basename}-${{ matrix.suffix }}.deb"
+              mv "$deb" "$dirname/${basename}-ios8.4.1.deb"
             fi
           done
           
@@ -224,17 +162,16 @@ jobs:
     - name: upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: scrubble-${{ matrix.suffix }}
+        name: scrubble-ios8.4.1
         path: packages/
         retention-days: 30
         
     - name: build summary
       run: |
-        echo "## Build Summary for ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Target:** ${{ matrix.target }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Architectures:** ${{ matrix.archs }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Scheme:** ${{ matrix.scheme }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **SDK:** iPhoneOS14.5.sdk (compatible with iOS 8+)" >> $GITHUB_STEP_SUMMARY
+        echo "## Build Summary for iOS 8.4.1" >> $GITHUB_STEP_SUMMARY
+        echo "- **Target:** iphone:clang:8.4:8.0" >> $GITHUB_STEP_SUMMARY
+        echo "- **Architecture:** armv7" >> $GITHUB_STEP_SUMMARY
+        echo "- **SDK:** iPhoneOS8.4.sdk" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Packages Created:" >> $GITHUB_STEP_SUMMARY
         for deb in packages/*.deb; do
