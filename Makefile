@@ -11,7 +11,7 @@ include $(THEOS)/makefiles/common.mk
 TOOL_NAME = Scrubble
 
 Scrubble_FILES = $(wildcard src/*.m)
-Scrubble_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-variable
+Scrubble_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-variable -Wno-format
 Scrubble_CODESIGN_FLAGS = -Sentitlements.plist
 Scrubble_INSTALL_PATH = /usr/local/libexec/
 $(TOOL_NAME)_PRIVATE_FRAMEWORKS = MediaRemote

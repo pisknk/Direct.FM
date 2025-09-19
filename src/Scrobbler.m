@@ -54,7 +54,7 @@ NSString *queryString(NSDictionary *items) {
 		completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             NSHTTPURLResponse *resp = (NSHTTPURLResponse*)response;
         	if (resp.statusCode == 403) [self tokenExpired];
-			else if (resp.statusCode != 200) NSLog(@"[Scrubble] An unknown error occured: Status code = %ld, data = %@", resp.statusCode, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+			else if (resp.statusCode != 200) NSLog(@"[Scrubble] An unknown error occured: Status code = %ld, data = %@", (long)resp.statusCode, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
 			else completionHandler(data, resp, error);
 		}];
 	[dataTask resume];
