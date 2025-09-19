@@ -1,4 +1,4 @@
-name: Build Jailbreak Tweak (Rootless)
+name: Build Jailbreak Tweak (Multi-iOS Support)
 
 on:
   push:
@@ -6,10 +6,44 @@ on:
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      build_target:
+        description: 'Build target'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - ios8_32bit
+        - modern_rootless
+        - modern_rootfs
 
 jobs:
   build:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - name: "iOS 8.4.1 (32-bit) - iPhone 5"
+            target: "iphone:clang:latest:8.0"
+            archs: "armv7"
+            scheme: "rootfs"
+            sdk: "iPhoneOS8.4.sdk"
+            suffix: "ios8-armv7"
+          - name: "Modern iOS (Rootless) - arm64e"
+            target: "iphone:clang:14.5:14.0"
+            archs: "arm64e"
+            scheme: "rootless"
+            sdk: "iPhoneOS14.5.sdk"
+            suffix: "modern-rootless-arm64e"
+          - name: "Modern iOS (Rootfs) - Universal"
+            target: "iphone:clang:latest:8.0"
+            archs: "armv7 arm64 arm64e"
+            scheme: "rootfs"
+            sdk: "iPhoneOS14.5.sdk"
+            suffix: "universal-rootfs"
+    
+    name: ${{ matrix.name }}
     
     steps:
     - name: checkout code
@@ -44,10 +78,19 @@ jobs:
       run: |
         export THEOS=$HOME/theos
         
-        # download ios sdk using sparse checkout from official theos sdks
+        # download ios sdks using sparse checkout from official theos sdks
         git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/
         cd sdks
-        git sparse-checkout set --no-cone iPhoneOS14.5.sdk
+        
+        # download both modern and legacy sdks
+        if [[ "${{ matrix.sdk }}" == "iPhoneOS8.4.sdk" ]]; then
+          echo "downloading ios 8.4 sdk for legacy support..."
+          git sparse-checkout set --no-cone iPhoneOS8.4.sdk
+        else
+          echo "downloading ios 14.5 sdk for modern support..."
+          git sparse-checkout set --no-cone iPhoneOS14.5.sdk
+        fi
+        
         git checkout
         mkdir -p $THEOS/sdks
         mv *.sdk $THEOS/sdks/
@@ -55,8 +98,18 @@ jobs:
         rm -rf sdks
         
         # verify sdk installation
+        echo "installed sdks:"
         ls -la $THEOS/sdks/
-        ls -la $THEOS/sdks/iPhoneOS14.5.sdk/
+        
+        # verify specific sdk
+        if [[ -d "$THEOS/sdks/${{ matrix.sdk }}" ]]; then
+          echo "verified ${{ matrix.sdk }} installation:"
+          ls -la $THEOS/sdks/${{ matrix.sdk }}/
+        else
+          echo "warning: expected sdk ${{ matrix.sdk }} not found"
+          echo "available sdks:"
+          ls -la $THEOS/sdks/
+        fi
         
     # No external frameworks needed - using standard iOS preferences only
         
@@ -64,20 +117,65 @@ jobs:
       run: |
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
-
-
         
-        # build the main tool for rootless jailbreaks (dopamine, palera1n, etc.)
+        echo "building scrubble for ${{ matrix.name }}"
+        echo "target: ${{ matrix.target }}"
+        echo "architectures: ${{ matrix.archs }}"
+        echo "scheme: ${{ matrix.scheme }}"
+        
         cd $GITHUB_WORKSPACE
-        make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1 ARCHS=arm64e TARGET=iphone:clang:14.5:14.0
         
-        # list built artifacts
-        ls -la packages/
+        # build command based on scheme
+        if [[ "${{ matrix.scheme }}" == "rootless" ]]; then
+          echo "building for rootless jailbreak..."
+          make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1 ARCHS="${{ matrix.archs }}" TARGET="${{ matrix.target }}"
+        else
+          echo "building for traditional rootfs jailbreak..."
+          make package DEBUG=0 FINALPACKAGE=1 ARCHS="${{ matrix.archs }}" TARGET="${{ matrix.target }}"
+        fi
+        
+        # rename package with suffix for identification
+        if [[ -d "packages" ]]; then
+          echo "build successful! packages created:"
+          ls -la packages/
+          
+          # rename .deb files to include suffix
+          for deb in packages/*.deb; do
+            if [[ -f "$deb" ]]; then
+              basename=$(basename "$deb" .deb)
+              dirname=$(dirname "$deb")
+              mv "$deb" "$dirname/${basename}-${{ matrix.suffix }}.deb"
+            fi
+          done
+          
+          echo "renamed packages:"
+          ls -la packages/
+        else
+          echo "build failed - no packages directory created"
+          exit 1
+        fi
         
     - name: upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: tweak-package
+        name: scrubble-${{ matrix.suffix }}
         path: packages/
         retention-days: 30
+        
+    - name: build summary
+      run: |
+        echo "## Build Summary for ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Target:** ${{ matrix.target }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Architectures:** ${{ matrix.archs }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Scheme:** ${{ matrix.scheme }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **SDK:** ${{ matrix.sdk }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Packages Created:" >> $GITHUB_STEP_SUMMARY
+        for deb in packages/*.deb; do
+          if [[ -f "$deb" ]]; then
+            size=$(ls -lh "$deb" | awk '{print $5}')
+            name=$(basename "$deb")
+            echo "- \`$name\` ($size)" >> $GITHUB_STEP_SUMMARY
+          fi
+        done
         

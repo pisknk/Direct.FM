@@ -43,6 +43,28 @@ NSString *queryString(NSDictionary *items) {
 
 @implementation SCRUBRootListController
 
+// helper method for ios 8 compatibility
+- (void)showAlertWithTitle:(NSString *)title message:(NSString *)message buttonTitle:(NSString *)buttonTitle {
+    [self showAlertWithTitle:title message:message buttonTitle:buttonTitle completion:nil];
+}
+
+- (void)showAlertWithTitle:(NSString *)title message:(NSString *)message buttonTitle:(NSString *)buttonTitle completion:(void (^)(void))completion {
+    if ([UIAlertController class]) {
+        // ios 9+ code
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertAction *action = [UIAlertAction actionWithTitle:buttonTitle style:UIAlertActionStyleDefault handler:^(UIAlertAction * _Nonnull action) {
+            if (completion) completion();
+        }];
+        [alert addAction:action];
+        [self presentViewController:alert animated:YES completion:nil];
+    } else {
+        // ios 8 fallback
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:title message:message delegate:nil cancelButtonTitle:buttonTitle otherButtonTitles:nil];
+        [alertView show];
+        if (completion) completion();
+    }
+}
+
 - (NSArray *)specifiers {
 	if (!_specifiers) {
         self.daemonRunning = false;
@@ -129,18 +151,31 @@ NSString *queryString(NSDictionary *items) {
     NSString *action = (!self.daemonRunning ? @"start" : @"stop");
     NSString *command = [NSString stringWithFormat:@"sudo %@ %@ %@", JBROOT_PATH_NSSTRING(@"/usr/bin/launchctl"), action, @"fr.rootfs.scrubble"];
 
-    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"Scrubble" message:[NSString stringWithFormat:@"In order to %@ Scrubble, you need to paste this command into NewTerm. \n The default password is alpine.", action] preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction* openNewTermAction = [UIAlertAction actionWithTitle:@"Open NewTerm" style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {
+    // use ios 8 compatible uialertview instead of uialertcontroller for ios 8.4.1 compatibility
+    if ([UIAlertController class]) {
+        // ios 9+ code
+        UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"Scrubble" message:[NSString stringWithFormat:@"In order to %@ Scrubble, you need to paste this command into NewTerm. \n The default password is alpine.", action] preferredStyle:UIAlertControllerStyleAlert];
+        UIAlertAction* openNewTermAction = [UIAlertAction actionWithTitle:@"Open NewTerm" style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {
+            UIPasteboard.generalPasteboard.string = command;
+            [[objc_getClass("LSApplicationWorkspace") performSelector:@selector(defaultWorkspace)] performSelector:@selector(openApplicationWithBundleID:) withObject:@"ws.hbang.Terminal"];
+        }];
+
+        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+
+        [alertController addAction:openNewTermAction];
+        [alertController addAction:cancelAction];
+
+        [self presentViewController:alertController animated:YES completion:nil];
+    } else {
+        // ios 8 fallback using uialertview
         UIPasteboard.generalPasteboard.string = command;
-        [[objc_getClass("LSApplicationWorkspace") performSelector:@selector(defaultWorkspace)] performSelector:@selector(openApplicationWithBundleID:) withObject:@"ws.hbang.Terminal"];
-    }];
-
-    UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
-
-    [alertController addAction:openNewTermAction];
-    [alertController addAction:cancelAction];
-
-    [self presentViewController:alertController animated:YES completion:nil];
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Scrubble" 
+                                                            message:[NSString stringWithFormat:@"Command copied to clipboard: %@\n\nPaste this into NewTerm. The default password is alpine.", command] 
+                                                           delegate:nil 
+                                                  cancelButtonTitle:@"OK" 
+                                                  otherButtonTitles:nil];
+        [alertView show];
+    }
 }
 
 - (NSString*)toggleDaemonLabel {
@@ -170,22 +205,37 @@ NSString *queryString(NSDictionary *items) {
 		BOOL success = [resp statusCode] == 200;
 
         dispatch_async(dispatch_get_main_queue(), ^{
-            UIAlertController *controller = [UIAlertController alertControllerWithTitle:(success ? @"Login succeeded" : @"Login failed") message:(success ? nil : [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]) preferredStyle:UIAlertControllerStyleAlert];
-            UIAlertAction *action = [UIAlertAction actionWithTitle:@"Ok" style:UIAlertActionStyleDefault handler:nil];
+            // ios 8 compatible alert handling
+            if ([UIAlertController class]) {
+                // ios 9+ code
+                UIAlertController *controller = [UIAlertController alertControllerWithTitle:(success ? @"Login succeeded" : @"Login failed") message:(success ? nil : [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]) preferredStyle:UIAlertControllerStyleAlert];
+                UIAlertAction *action = [UIAlertAction actionWithTitle:@"Ok" style:UIAlertActionStyleDefault handler:nil];
 
-            [controller addAction:action];
-            [self presentViewController:controller animated:YES completion:nil];
+                [controller addAction:action];
+                [self presentViewController:controller animated:YES completion:nil];
+            } else {
+                // ios 8 fallback
+                NSString *message = success ? @"Login succeeded" : [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+                [self showAlertWithTitle:(success ? @"Login succeeded" : @"Login failed") message:message buttonTitle:@"Ok"];
+            }
         });
 
 	}] resume];
 }
 
 - (void)checkScrobbleStatus {
-    // show loading indicator
-    UIAlertController *loadingAlert = [UIAlertController alertControllerWithTitle:@"Checking Scrobble Status" 
-                                                                          message:@"Please wait..." 
-                                                                   preferredStyle:UIAlertControllerStyleAlert];
-    [self presentViewController:loadingAlert animated:YES completion:nil];
+    // show loading indicator - ios 8 compatible
+    UIViewController *loadingAlert = nil;
+    if ([UIAlertController class]) {
+        // ios 9+ code
+        loadingAlert = [UIAlertController alertControllerWithTitle:@"Checking Scrobble Status" 
+                                                            message:@"Please wait..." 
+                                                     preferredStyle:UIAlertControllerStyleAlert];
+        [self presentViewController:loadingAlert animated:YES completion:nil];
+    } else {
+        // ios 8 fallback - show alert at the end since we can't show loading
+        // we'll just show the final result
+    }
     
     NSMutableString *statusMessage = [[NSMutableString alloc] init];
     NSMutableString *statusTitle = [[NSMutableString alloc] init];
@@ -228,9 +278,14 @@ NSString *queryString(NSDictionary *items) {
         [statusMessage appendString:@"Last.fm Status: Missing credentials"];
         
         dispatch_async(dispatch_get_main_queue(), ^{
-            [loadingAlert dismissViewControllerAnimated:NO completion:^{
+            if (loadingAlert) {
+                [loadingAlert dismissViewControllerAnimated:NO completion:^{
+                    [self showStatusAlert:statusTitle.copy message:statusMessage.copy];
+                }];
+            } else {
+                // ios 8 fallback - just show the result
                 [self showStatusAlert:statusTitle.copy message:statusMessage.copy];
-            }];
+            }
         });
         return;
     }
@@ -266,32 +321,51 @@ NSString *queryString(NSDictionary *items) {
         }
         
         dispatch_async(dispatch_get_main_queue(), ^{
-            [loadingAlert dismissViewControllerAnimated:NO completion:^{
+            if (loadingAlert) {
+                [loadingAlert dismissViewControllerAnimated:NO completion:^{
+                    [self showStatusAlert:statusTitle.copy message:statusMessage.copy];
+                }];
+            } else {
+                // ios 8 fallback - just show the result
                 [self showStatusAlert:statusTitle.copy message:statusMessage.copy];
-            }];
+            }
         });
     }] resume];
 }
 
 - (void)showStatusAlert:(NSString *)title message:(NSString *)message {
-    UIAlertController *statusAlert = [UIAlertController alertControllerWithTitle:title 
-                                                                         message:message 
-                                                                  preferredStyle:UIAlertControllerStyleAlert];
-    
-    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
-    [statusAlert addAction:okAction];
-    
-    // add action to refresh daemon status if needed
-    if ([title containsString:@"Daemon Not Running"]) {
-        UIAlertAction *refreshAction = [UIAlertAction actionWithTitle:@"Refresh Status" 
-                                                                style:UIAlertActionStyleDefault 
-                                                              handler:^(UIAlertAction * _Nonnull action) {
-            [self reloadDaemonStatus];
-        }];
-        [statusAlert addAction:refreshAction];
+    if ([UIAlertController class]) {
+        // ios 9+ code
+        UIAlertController *statusAlert = [UIAlertController alertControllerWithTitle:title 
+                                                                             message:message 
+                                                                      preferredStyle:UIAlertControllerStyleAlert];
+        
+        UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
+        [statusAlert addAction:okAction];
+        
+        // add action to refresh daemon status if needed
+        if ([title containsString:@"Daemon Not Running"]) {
+            UIAlertAction *refreshAction = [UIAlertAction actionWithTitle:@"Refresh Status" 
+                                                                    style:UIAlertActionStyleDefault 
+                                                                  handler:^(UIAlertAction * _Nonnull action) {
+                [self reloadDaemonStatus];
+            }];
+            [statusAlert addAction:refreshAction];
+        }
+        
+        [self presentViewController:statusAlert animated:YES completion:nil];
+    } else {
+        // ios 8 fallback
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:title 
+                                                            message:message 
+                                                           delegate:nil 
+                                                  cancelButtonTitle:@"OK" 
+                                                  otherButtonTitles:nil];
+        [alertView show];
+        
+        // note: refresh functionality not available in ios 8 fallback
+        // user will need to manually refresh
     }
-    
-    [self presentViewController:statusAlert animated:YES completion:nil];
 }
 
 // debugging methods
@@ -325,12 +399,7 @@ NSString *queryString(NSDictionary *items) {
     [self reloadSpecifier:[self specifierForID:@"lastScrobbledTrack"]];
     [self reloadSpecifier:[self specifierForID:@"currentPlayingApp"]];
     
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Debug Info Reset" 
-                                                                   message:@"Scrobble counter and debug info have been reset." 
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
-    [alert addAction:okAction];
-    [self presentViewController:alert animated:YES completion:nil];
+    [self showAlertWithTitle:@"Debug Info Reset" message:@"Scrobble counter and debug info have been reset." buttonTitle:@"OK"];
 }
 
 // app picker methods
@@ -343,12 +412,7 @@ NSString *queryString(NSDictionary *items) {
 
 - (void)showSelectedAppsPopup {
     if (!self.selectedAppBundleIDs || self.selectedAppBundleIDs.count == 0) {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"No Apps Selected" 
-                                                                       message:@"You haven't selected any apps to scrobble from yet. Tap 'Choose Apps to Scrobble' to select apps." 
-                                                                preferredStyle:UIAlertControllerStyleAlert];
-        UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
-        [alert addAction:okAction];
-        [self presentViewController:alert animated:YES completion:nil];
+        [self showAlertWithTitle:@"No Apps Selected" message:@"You haven't selected any apps to scrobble from yet. Tap 'Choose Apps to Scrobble' to select apps." buttonTitle:@"OK"];
         return;
     }
     
@@ -360,20 +424,31 @@ NSString *queryString(NSDictionary *items) {
     NSString *appList = [appNames componentsJoinedByString:@"\n• "];
     NSString *message = [NSString stringWithFormat:@"Currently scrobbling from these apps:\n\n• %@", appList];
     
-    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Selected Apps" 
-                                                                   message:message 
-                                                            preferredStyle:UIAlertControllerStyleAlert];
-    
-    UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
-    UIAlertAction *editAction = [UIAlertAction actionWithTitle:@"Edit Selection" 
-                                                         style:UIAlertActionStyleDefault 
-                                                       handler:^(UIAlertAction * _Nonnull action) {
-        [self showAppPicker];
-    }];
-    
-    [alert addAction:okAction];
-    [alert addAction:editAction];
-    [self presentViewController:alert animated:YES completion:nil];
+    if ([UIAlertController class]) {
+        // ios 9+ code
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Selected Apps" 
+                                                                       message:message 
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        
+        UIAlertAction *okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
+        UIAlertAction *editAction = [UIAlertAction actionWithTitle:@"Edit Selection" 
+                                                             style:UIAlertActionStyleDefault 
+                                                           handler:^(UIAlertAction * _Nonnull action) {
+            [self showAppPicker];
+        }];
+        
+        [alert addAction:okAction];
+        [alert addAction:editAction];
+        [self presentViewController:alert animated:YES completion:nil];
+    } else {
+        // ios 8 fallback - show alert with just ok, then ask if they want to edit
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Selected Apps" 
+                                                            message:[message stringByAppendingString:@"\n\nTap 'Choose Apps to Scrobble' to edit selection."] 
+                                                           delegate:nil 
+                                                  cancelButtonTitle:@"OK" 
+                                                  otherButtonTitles:nil];
+        [alertView show];
+    }
 }
 
 - (void)saveSelectedApps {
