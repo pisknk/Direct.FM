@@ -11,8 +11,8 @@ Scrubble_CODESIGN_FLAGS = -Sentitlements.plist
 Scrubble_INSTALL_PATH = /usr/local/libexec/
 
 # Link MediaRemote framework for iOS 8
-Scrubble_LDFLAGS = -F$(THEOS)/sdks/iPhoneOS8.4.sdk/System/Library/PrivateFrameworks -framework MediaRemote
-ADDITIONAL_OBJCFLAGS = -I$(THEOS)/include/MediaRemote
+Scrubble_LDFLAGS = -F$(THEOS)/sdks/iPhoneOS8.4.sdk/System/Library/PrivateFrameworks -F$(THEOS)/sdks/iPhoneOS8.4.sdk/System/Library/Frameworks -framework MediaRemote
+ADDITIONAL_OBJCFLAGS = -I$(THEOS)/include/MediaRemote -I$(THEOS)/sdks/iPhoneOS8.4.sdk/System/Library/PrivateFrameworks/MediaRemote.framework/Headers
 
 include $(THEOS_MAKE_PATH)/tool.mk
 SUBPROJECTS += ScrubblePrefs

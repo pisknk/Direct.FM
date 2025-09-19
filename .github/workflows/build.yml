@@ -45,23 +45,49 @@ jobs:
       run: |
         export THEOS=$HOME/theos
         
-        # download ios 8.4 sdk
-        echo "downloading ios 8.4 sdk..."
+        # create sdks directory
         mkdir -p $THEOS/sdks
         cd $THEOS/sdks
         
-        # download ios 8.4 sdk from a reliable source
-        curl -L https://github.com/theos/sdks/archive/refs/heads/master.zip -o sdks.zip
-        unzip sdks.zip
-        mv sdks-master/iPhoneOS8.4.sdk .
-        rm -rf sdks.zip sdks-master
+        echo "downloading ios 8.4 sdk..."
+        
+        # clone specific commit that has iOS 8.4 SDK
+        git clone --quiet --depth=1 --branch master https://github.com/theos/sdks.git tmp
+        cd tmp
+        
+        # check available sdks
+        echo "available sdks:"
+        ls -la
+        
+        # try to find iOS 8.x SDK
+        if [[ -d "iPhoneOS8.4.sdk" ]]; then
+          echo "found ios 8.4 sdk"
+          mv iPhoneOS8.4.sdk ..
+        elif [[ -d "iPhoneOS8.1.sdk" ]]; then
+          echo "found ios 8.1 sdk (will use this instead)"
+          mv iPhoneOS8.1.sdk ../iPhoneOS8.4.sdk
+        else
+          echo "error: no ios 8.x sdk found"
+          echo "contents of directory:"
+          ls -la
+          exit 1
+        fi
+        
+        # cleanup
+        cd ..
+        rm -rf tmp
         
         # verify sdk installation
         if [[ -d "iPhoneOS8.4.sdk" ]]; then
-          echo "ios 8.4 sdk installed successfully"
-          ls -la iPhoneOS8.4.sdk/System/Library/PrivateFrameworks/
+          echo "sdk installation successful"
+          echo "sdk contents:"
+          ls -la iPhoneOS8.4.sdk/
+          echo "private frameworks:"
+          ls -la iPhoneOS8.4.sdk/System/Library/PrivateFrameworks/ || echo "private frameworks directory not found"
         else
-          echo "error: ios 8.4 sdk installation failed"
+          echo "error: sdk verification failed"
+          echo "contents of sdks directory:"
+          ls -la
           exit 1
         fi
         
