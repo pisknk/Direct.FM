@@ -132,6 +132,15 @@ jobs:
         
         #import <Foundation/Foundation.h>
         
+        // handle ios version differences
+        #if __arm__
+            // ios 8.4.1 (32-bit) - no NSNotificationName
+            #define MR_NOTIFICATION NSString *
+        #else
+            // modern ios - use NSNotificationName
+            #define MR_NOTIFICATION NSNotificationName
+        #endif
+        
         #if __cplusplus
         extern "C" {
         #endif
@@ -144,10 +153,10 @@ jobs:
         void MRMediaRemoteRegisterForNowPlayingNotifications(dispatch_queue_t queue);
         void MRMediaRemoteUnregisterForNowPlayingNotifications();
         
-        extern NSString * const kMRMediaRemoteNowPlayingInfoDidChangeNotification;
-        extern NSString * const kMRMediaRemoteNowPlayingPlaybackQueueDidChangeNotification;
-        extern NSString * const kMRMediaRemoteNowPlayingApplicationDidChangeNotification;
-        extern NSString * const kMRMediaRemoteNowPlayingApplicationIsPlayingDidChangeNotification;
+        extern MR_NOTIFICATION const kMRMediaRemoteNowPlayingInfoDidChangeNotification;
+        extern MR_NOTIFICATION const kMRMediaRemoteNowPlayingPlaybackQueueDidChangeNotification;
+        extern MR_NOTIFICATION const kMRMediaRemoteNowPlayingApplicationDidChangeNotification;
+        extern MR_NOTIFICATION const kMRMediaRemoteNowPlayingApplicationIsPlayingDidChangeNotification;
         
         extern NSString * const kMRMediaRemoteNowPlayingInfoTitle;
         extern NSString * const kMRMediaRemoteNowPlayingInfoArtist;
