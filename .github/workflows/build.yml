@@ -117,7 +117,58 @@ jobs:
           exit 1
         fi
         
-    # No external frameworks needed - using standard iOS preferences only
+    # Setup MediaRemote framework headers for iOS 8.4.1
+    - name: setup mediaremote headers
+      run: |
+        export THEOS=$HOME/theos
+        
+        # create headers directory
+        mkdir -p $THEOS/include/MediaRemote
+        
+        # create MediaRemote.h with necessary declarations
+        cat > $THEOS/include/MediaRemote/MediaRemote.h << 'EOF'
+        #ifndef MEDIAREMOTE_H_
+        #define MEDIAREMOTE_H_
+        
+        #import <Foundation/Foundation.h>
+        
+        #if __cplusplus
+        extern "C" {
+        #endif
+        
+        typedef void (^MRMediaRemoteGetNowPlayingInfoCompletion)(CFDictionaryRef information);
+        typedef void (^MRMediaRemoteGetNowPlayingApplicationIsPlayingCompletion)(Boolean isPlaying);
+        
+        void MRMediaRemoteGetNowPlayingInfo(dispatch_queue_t queue, MRMediaRemoteGetNowPlayingInfoCompletion completion);
+        void MRMediaRemoteGetNowPlayingApplicationIsPlaying(dispatch_queue_t queue, MRMediaRemoteGetNowPlayingApplicationIsPlayingCompletion completion);
+        void MRMediaRemoteRegisterForNowPlayingNotifications(dispatch_queue_t queue);
+        void MRMediaRemoteUnregisterForNowPlayingNotifications();
+        
+        extern NSString * const kMRMediaRemoteNowPlayingInfoDidChangeNotification;
+        extern NSString * const kMRMediaRemoteNowPlayingPlaybackQueueDidChangeNotification;
+        extern NSString * const kMRMediaRemoteNowPlayingApplicationDidChangeNotification;
+        extern NSString * const kMRMediaRemoteNowPlayingApplicationIsPlayingDidChangeNotification;
+        
+        extern NSString * const kMRMediaRemoteNowPlayingInfoTitle;
+        extern NSString * const kMRMediaRemoteNowPlayingInfoArtist;
+        extern NSString * const kMRMediaRemoteNowPlayingInfoAlbum;
+        extern NSString * const kMRMediaRemoteNowPlayingInfoDuration;
+        extern NSString * const kMRMediaRemoteNowPlayingInfoTimestamp;
+        extern NSString * const kMRMediaRemoteNowPlayingInfoArtworkData;
+        extern NSString * const kMRMediaRemoteNowPlayingInfoElapsedTime;
+        extern NSString * const kMRMediaRemoteNowPlayingInfoPlaybackRate;
+        extern NSString * const kMRMediaRemoteNowPlayingInfoRepeatMode;
+        extern NSString * const kMRMediaRemoteNowPlayingInfoShuffleMode;
+        
+        #if __cplusplus
+        }
+        #endif
+        
+        #endif /* MEDIAREMOTE_H_ */
+        EOF
+        
+        echo "MediaRemote headers created at $THEOS/include/MediaRemote/MediaRemote.h"
+        ls -la $THEOS/include/MediaRemote/
         
     - name: build tweak
       run: |

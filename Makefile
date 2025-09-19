@@ -14,7 +14,16 @@ Scrubble_FILES = $(wildcard src/*.m)
 Scrubble_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-variable -Wno-format
 Scrubble_CODESIGN_FLAGS = -Sentitlements.plist
 Scrubble_INSTALL_PATH = /usr/local/libexec/
-$(TOOL_NAME)_PRIVATE_FRAMEWORKS = MediaRemote
+
+# MediaRemote framework handling
+ifeq ($(ARCHS),armv7)
+    # iOS 8.4.1 (32-bit) - use direct linking and headers
+    Scrubble_LDFLAGS = -F/System/Library/PrivateFrameworks -framework MediaRemote
+    ADDITIONAL_OBJCFLAGS = -I$(THEOS)/include/MediaRemote
+else
+    # Modern iOS - use private frameworks
+    $(TOOL_NAME)_PRIVATE_FRAMEWORKS = MediaRemote
+endif
 
 include $(THEOS_MAKE_PATH)/tool.mk
 SUBPROJECTS += ScrubblePrefs

@@ -1,6 +1,15 @@
 #import "Scrobbler.h"
 #include <Foundation/Foundation.h>
 
+// handle ios 8.4.1 mediaremote compatibility
+#if __arm__
+    // 32-bit ios - use direct framework path
+    #import <MediaRemote/MediaRemote.h>
+#else
+    // 64-bit ios - use private framework
+    #import <MediaRemote/MediaRemote.h>
+#endif
+
 
 NSString *md5(NSString *str) {
 	const char *cstr = [str UTF8String];
