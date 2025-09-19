@@ -1,12 +1,15 @@
 TARGET := iphone:clang:9.3:8.0
 ARCHS = armv7
 
+# Disable modules and suppress deprecated warnings for iOS 9.3 SDK compatibility
+ADDITIONAL_OBJCFLAGS = -fno-modules -Wno-deprecated-module-dot-map -Wno-error
+
 include $(THEOS)/makefiles/common.mk
 
 TOOL_NAME = Scrubble
 
 Scrubble_FILES = $(wildcard src/*.m)
-Scrubble_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-variable -Wno-format
+Scrubble_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-variable -Wno-format -Wno-deprecated-module-dot-map -fno-modules
 Scrubble_CODESIGN_FLAGS = -Sentitlements.plist
 Scrubble_INSTALL_PATH = /usr/local/libexec/
 
