@@ -28,19 +28,16 @@ jobs:
             target: "iphone:clang:latest:8.0"
             archs: "armv7"
             scheme: "rootfs"
-            sdk: "iPhoneOS8.4.sdk"
             suffix: "ios8-armv7"
           - name: "Modern iOS (Rootless) - arm64e"
             target: "iphone:clang:14.5:14.0"
             archs: "arm64e"
             scheme: "rootless"
-            sdk: "iPhoneOS14.5.sdk"
             suffix: "modern-rootless-arm64e"
           - name: "Modern iOS (Rootfs) - Universal"
             target: "iphone:clang:latest:8.0"
             archs: "armv7 arm64 arm64e"
             scheme: "rootfs"
-            sdk: "iPhoneOS14.5.sdk"
             suffix: "universal-rootfs"
     
     name: ${{ matrix.name }}
@@ -78,22 +75,33 @@ jobs:
       run: |
         export THEOS=$HOME/theos
         
-        # download ios sdks using sparse checkout from official theos sdks
+        # download ios 14.5 sdk (works for all targets including ios 8 with proper targeting)
+        echo "downloading ios 14.5 sdk..."
         git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/
         cd sdks
         
-        # download both modern and legacy sdks
-        if [[ "${{ matrix.sdk }}" == "iPhoneOS8.4.sdk" ]]; then
-          echo "downloading ios 8.4 sdk for legacy support..."
-          git sparse-checkout set --no-cone iPhoneOS8.4.sdk
+        # list available sdks first for debugging
+        echo "checking available sdks in repository..."
+        git ls-tree -r --name-only HEAD | grep "\.sdk" | head -10
+        
+        # download ios 14.5 sdk
+        git sparse-checkout set --no-cone iPhoneOS14.5.sdk
+        git checkout
+        
+        # create sdks directory and move sdk
+        mkdir -p $THEOS/sdks
+        
+        # check if sdk was downloaded and move it
+        if [[ -d "iPhoneOS14.5.sdk" ]]; then
+          mv iPhoneOS14.5.sdk $THEOS/sdks/
+          echo "ios 14.5 sdk installed successfully"
         else
-          echo "downloading ios 14.5 sdk for modern support..."
-          git sparse-checkout set --no-cone iPhoneOS14.5.sdk
+          echo "error: iPhoneOS14.5.sdk not found after checkout"
+          echo "contents of current directory:"
+          ls -la
+          exit 1
         fi
         
-        git checkout
-        mkdir -p $THEOS/sdks
-        mv *.sdk $THEOS/sdks/
         cd ..
         rm -rf sdks
         
@@ -101,14 +109,12 @@ jobs:
         echo "installed sdks:"
         ls -la $THEOS/sdks/
         
-        # verify specific sdk
-        if [[ -d "$THEOS/sdks/${{ matrix.sdk }}" ]]; then
-          echo "verified ${{ matrix.sdk }} installation:"
-          ls -la $THEOS/sdks/${{ matrix.sdk }}/
+        if [[ -d "$THEOS/sdks/iPhoneOS14.5.sdk" ]]; then
+          echo "sdk verification successful"
+          ls -la $THEOS/sdks/iPhoneOS14.5.sdk/ | head -5
         else
-          echo "warning: expected sdk ${{ matrix.sdk }} not found"
-          echo "available sdks:"
-          ls -la $THEOS/sdks/
+          echo "error: sdk verification failed"
+          exit 1
         fi
         
     # No external frameworks needed - using standard iOS preferences only
@@ -168,7 +174,7 @@ jobs:
         echo "- **Target:** ${{ matrix.target }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Architectures:** ${{ matrix.archs }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Scheme:** ${{ matrix.scheme }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **SDK:** ${{ matrix.sdk }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **SDK:** iPhoneOS14.5.sdk (compatible with iOS 8+)" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### Packages Created:" >> $GITHUB_STEP_SUMMARY
         for deb in packages/*.deb; do
