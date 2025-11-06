@@ -160,8 +160,8 @@ NSString *queryString(NSDictionary *items) {
 }
 
 -(void) registerObserver {
-    // use MR_NOTIFICATION type which handles ios version differences
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(musicDidChange:) name:kMRMediaRemoteNowPlayingInfoDidChangeNotification object:nil];
+    // use bridge cast for CFStringRef to NSNotificationName conversion
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(musicDidChange:) name:(__bridge NSNotificationName)kMRMediaRemoteNowPlayingInfoDidChangeNotification object:nil];
 	MRMediaRemoteRegisterForNowPlayingNotifications(dispatch_get_main_queue());
 }
 

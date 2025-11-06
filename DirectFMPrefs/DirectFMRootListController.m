@@ -186,8 +186,9 @@ NSString *queryString(NSDictionary *items) {
 -(void) login {
     NSString *username = [self readPreferenceValue:[self specifierForID:@"username"]];
     NSString *password = [self readPreferenceValue:[self specifierForID:@"password"]];
-	NSString *apiKey = @LASTFM_API_KEY;
-    NSString *apiSecret = @LASTFM_API_SECRET;
+	// use hardcoded api credentials (macro already includes @"" so don't add @)
+	NSString *apiKey = LASTFM_API_KEY;
+    NSString *apiSecret = LASTFM_API_SECRET;
 
     NSString *sigContent = [NSString stringWithFormat:@"api_key%@method%@password%@username%@%@", apiKey, @"auth.getMobileSession", password, username, apiSecret];
 	NSString *sig = md5(sigContent);
@@ -271,8 +272,9 @@ NSString *queryString(NSDictionary *items) {
     // test last.fm connectivity
     NSString *username = [self readPreferenceValue:[self specifierForID:@"username"]];
     NSString *password = [self readPreferenceValue:[self specifierForID:@"password"]];
-    NSString *apiKey = @LASTFM_API_KEY;
-    NSString *apiSecret = @LASTFM_API_SECRET;
+    // use hardcoded api credentials (macro already includes @"" so don't add @)
+    NSString *apiKey = LASTFM_API_KEY;
+    NSString *apiSecret = LASTFM_API_SECRET;
     
     if (!username || !password) {
         [statusTitle setString:@"⚠️ Configuration Incomplete"];

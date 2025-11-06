@@ -33,8 +33,9 @@ void updatePrefs() {
 
 	enabled = (prefs && [prefs objectForKey:@"enabled"] ? [[prefs valueForKey:@"enabled"] boolValue] : YES );
 
-	NSString *apiKey = @LASTFM_API_KEY;
-	NSString *apiSecret = @LASTFM_API_SECRET;
+	// use hardcoded api credentials (macro already includes @"" so don't add @)
+	NSString *apiKey = LASTFM_API_KEY;
+	NSString *apiSecret = LASTFM_API_SECRET;
 	NSString *username = [prefs objectForKey:@"username"];
 	NSString *password = [prefs objectForKey:@"password"];
 	float scrobbleAfter = [prefs objectForKey:@"scrobbleAfter"] ? [[prefs objectForKey:@"scrobbleAfter"] floatValue] : 0.7;
