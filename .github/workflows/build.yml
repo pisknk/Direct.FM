@@ -1,4 +1,4 @@
-name: Build Jailbreak Tweak (iOS 8.4.1)
+name: Build Jailbreak Tweak (Rootless)
 
 on:
   push:
@@ -10,7 +10,6 @@ on:
 jobs:
   build:
     runs-on: macos-latest
-    name: Build for iOS 8.4.1
     
     steps:
     - name: checkout code
@@ -41,159 +40,44 @@ jobs:
         # setup frameworks directory
         mkdir -p $THEOS/lib
         
-    - name: setup ios sdk for ios 8 targeting
+    - name: setup ios sdk
       run: |
         export THEOS=$HOME/theos
         
-        # create sdks directory
+        # download ios sdk using sparse checkout from official theos sdks
+        git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/
+        cd sdks
+        git sparse-checkout set --no-cone iPhoneOS14.5.sdk
+        git checkout
         mkdir -p $THEOS/sdks
-        cd $THEOS/sdks
-        
-        echo "downloading ios 9.3 sdk for ios 8 targeting..."
-        
-        # clone sdk repository
-        git clone --quiet --depth=1 --branch master https://github.com/theos/sdks.git tmp
-        cd tmp
-        
-        # use iOS 9.3 SDK (earliest available) for iOS 8 targeting
-        echo "using ios 9.3 sdk for ios 8.0 deployment target"
-        mv iPhoneOS9.3.sdk ../iPhoneOS9.3.sdk
-        
-        # cleanup
+        mv *.sdk $THEOS/sdks/
         cd ..
-        rm -rf tmp
+        rm -rf sdks
         
         # verify sdk installation
-        if [[ -d "iPhoneOS9.3.sdk" ]]; then
-          echo "sdk installation successful"
-          echo "sdk contents:"
-          ls -la iPhoneOS9.3.sdk/
-          echo "private frameworks:"
-          ls -la iPhoneOS9.3.sdk/System/Library/PrivateFrameworks/ | head -10
-          echo "mediaremote framework:"
-          ls -la iPhoneOS9.3.sdk/System/Library/PrivateFrameworks/MediaRemote.framework/ || echo "mediaremote not found"
-        else
-          echo "error: sdk verification failed"
-          echo "contents of sdks directory:"
-          ls -la
-          exit 1
-        fi
+        ls -la $THEOS/sdks/
+        ls -la $THEOS/sdks/iPhoneOS14.5.sdk/
         
-    # Setup MediaRemote framework headers for iOS 8.4.1
-    - name: setup mediaremote headers
-      run: |
-        export THEOS=$HOME/theos
-        
-        # create headers directory
-        mkdir -p $THEOS/include/MediaRemote
-        
-        # create MediaRemote.h with necessary declarations
-        cat > $THEOS/include/MediaRemote/MediaRemote.h << 'EOF'
-        #ifndef MEDIAREMOTE_H_
-        #define MEDIAREMOTE_H_
-        
-        #import <Foundation/Foundation.h>
-        
-        // handle ios version differences
-        #if __arm__
-            // ios 8.4.1 (32-bit) - no NSNotificationName
-            #define MR_NOTIFICATION NSString *
-        #else
-            // modern ios - use NSNotificationName
-            #define MR_NOTIFICATION NSNotificationName
-        #endif
-        
-        #if __cplusplus
-        extern "C" {
-        #endif
-        
-        typedef void (^MRMediaRemoteGetNowPlayingInfoCompletion)(CFDictionaryRef information);
-        typedef void (^MRMediaRemoteGetNowPlayingApplicationIsPlayingCompletion)(Boolean isPlaying);
-        
-        void MRMediaRemoteGetNowPlayingInfo(dispatch_queue_t queue, MRMediaRemoteGetNowPlayingInfoCompletion completion);
-        void MRMediaRemoteGetNowPlayingApplicationIsPlaying(dispatch_queue_t queue, MRMediaRemoteGetNowPlayingApplicationIsPlayingCompletion completion);
-        void MRMediaRemoteRegisterForNowPlayingNotifications(dispatch_queue_t queue);
-        void MRMediaRemoteUnregisterForNowPlayingNotifications();
-        
-        extern MR_NOTIFICATION const kMRMediaRemoteNowPlayingInfoDidChangeNotification;
-        extern MR_NOTIFICATION const kMRMediaRemoteNowPlayingPlaybackQueueDidChangeNotification;
-        extern MR_NOTIFICATION const kMRMediaRemoteNowPlayingApplicationDidChangeNotification;
-        extern MR_NOTIFICATION const kMRMediaRemoteNowPlayingApplicationIsPlayingDidChangeNotification;
-        
-        extern NSString * const kMRMediaRemoteNowPlayingInfoTitle;
-        extern NSString * const kMRMediaRemoteNowPlayingInfoArtist;
-        extern NSString * const kMRMediaRemoteNowPlayingInfoAlbum;
-        extern NSString * const kMRMediaRemoteNowPlayingInfoDuration;
-        extern NSString * const kMRMediaRemoteNowPlayingInfoTimestamp;
-        extern NSString * const kMRMediaRemoteNowPlayingInfoArtworkData;
-        extern NSString * const kMRMediaRemoteNowPlayingInfoElapsedTime;
-        extern NSString * const kMRMediaRemoteNowPlayingInfoPlaybackRate;
-        extern NSString * const kMRMediaRemoteNowPlayingInfoRepeatMode;
-        extern NSString * const kMRMediaRemoteNowPlayingInfoShuffleMode;
-        
-        #if __cplusplus
-        }
-        #endif
-        
-        #endif /* MEDIAREMOTE_H_ */
-        EOF
-        
-        echo "MediaRemote headers created at $THEOS/include/MediaRemote/MediaRemote.h"
-        ls -la $THEOS/include/MediaRemote/
+    # No external frameworks needed - using standard iOS preferences only
         
     - name: build tweak
       run: |
         export THEOS=$HOME/theos
         export PATH=$THEOS/bin:$PATH
+
+
         
-        echo "building scrubble for iOS 8.4.1"
+        # build the main tool for rootless jailbreaks (dopamine, palera1n, etc.)
         cd $GITHUB_WORKSPACE
+        make package THEOS_PACKAGE_SCHEME=rootless DEBUG=0 FINALPACKAGE=1 ARCHS=arm64e TARGET=iphone:clang:14.5:14.0
         
-        # build for ios 8.4.1
-        make package DEBUG=0 FINALPACKAGE=1
-        
-        # verify build
-        if [[ -d "packages" ]]; then
-          echo "build successful! packages created:"
-          ls -la packages/
-          
-          # rename package to indicate ios 8.4.1 build
-          for deb in packages/*.deb; do
-            if [[ -f "$deb" ]]; then
-              basename=$(basename "$deb" .deb)
-              dirname=$(dirname "$deb")
-              mv "$deb" "$dirname/${basename}-ios8.4.1.deb"
-            fi
-          done
-          
-          echo "renamed packages:"
-          ls -la packages/
-        else
-          echo "build failed - no packages directory created"
-          exit 1
-        fi
+        # list built artifacts
+        ls -la packages/
         
     - name: upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: scrubble-ios8.4.1
+        name: tweak-package
         path: packages/
         retention-days: 30
-        
-    - name: build summary
-      run: |
-        echo "## Build Summary for iOS 8.4.1 Compatibility" >> $GITHUB_STEP_SUMMARY
-        echo "- **Target:** iphone:clang:9.3:8.0 (iOS 9.3 SDK targeting iOS 8.0)" >> $GITHUB_STEP_SUMMARY
-        echo "- **Architecture:** armv7 (32-bit for iPhone 5)" >> $GITHUB_STEP_SUMMARY
-        echo "- **SDK:** iPhoneOS9.3.sdk" >> $GITHUB_STEP_SUMMARY
-        echo "- **Deployment Target:** iOS 8.0 (compatible with iOS 8.4.1)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Packages Created:" >> $GITHUB_STEP_SUMMARY
-        for deb in packages/*.deb; do
-          if [[ -f "$deb" ]]; then
-            size=$(ls -lh "$deb" | awk '{print $5}')
-            name=$(basename "$deb")
-            echo "- \`$name\` ($size)" >> $GITHUB_STEP_SUMMARY
-          fi
-        done
         
