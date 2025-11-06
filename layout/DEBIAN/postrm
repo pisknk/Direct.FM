@@ -16,6 +16,6 @@ else
    # rootless has no legacy app
 fi
 
-launchctl unload $ROOT_PREFIX/Library/LaunchDaemons/fr.rootfs.scrubble.plist 2> /dev/null
+launchctl unload $ROOT_PREFIX/Library/LaunchDaemons/playpass.direct.fm.plist 2> /dev/null
 
 exit 0

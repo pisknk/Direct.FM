@@ -15,12 +15,12 @@ else
    ROOT_PREFIX="/var/jb"
 fi
 
-chown root:wheel $ROOT_PREFIX/Library/LaunchDaemons/fr.rootfs.scrubble.plist
-chmod 644 $ROOT_PREFIX/Library/LaunchDaemons/fr.rootfs.scrubble.plist
+chown root:wheel $ROOT_PREFIX/Library/LaunchDaemons/playpass.direct.fm.plist
+chmod 644 $ROOT_PREFIX/Library/LaunchDaemons/playpass.direct.fm.plist
 
-chown root:wheel $ROOT_PREFIX/usr/local/libexec/Scrubble
-chmod 755 $ROOT_PREFIX/usr/local/libexec/Scrubble
+chown root:wheel $ROOT_PREFIX/usr/local/libexec/DirectFM
+chmod 755 $ROOT_PREFIX/usr/local/libexec/DirectFM
 
-launchctl load $ROOT_PREFIX/Library/LaunchDaemons/fr.rootfs.scrubble.plist 2> /dev/null
+launchctl load $ROOT_PREFIX/Library/LaunchDaemons/playpass.direct.fm.plist 2> /dev/null
 
 exit 0

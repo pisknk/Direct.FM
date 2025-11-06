@@ -1,7 +1,7 @@
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
 
-@interface SCRUBRootListController : PSListController
+@interface DirectFMRootListController : PSListController
 @property (atomic) bool daemonRunning;
 @property (strong, nonatomic) NSMutableArray *selectedAppBundleIDs;
 - (void)showAppPicker;
@@ -13,8 +13,8 @@
 @class LSApplicationProxy;
 
 // app picker using AltList with runtime loading
-@interface SCRUBAppPickerController : PSListController
-@property (weak, nonatomic) SCRUBRootListController *scrubbleRootController;
+@interface DirectFMAppPickerController : PSListController
+@property (weak, nonatomic) DirectFMRootListController *directFMRootController;
 @property (strong, nonatomic) NSMutableSet *selectedApplications;
 @property (assign, nonatomic) BOOL showIdentifiersAsSubtitle;
 @property (assign, nonatomic) BOOL showSearchBar;

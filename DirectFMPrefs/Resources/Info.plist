@@ -5,9 +5,9 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>ScrubblePrefs</string>
+	<string>DirectFMPrefs</string>
 	<key>CFBundleIdentifier</key>
-	<string>fr.rootfs.scrubbleprefs</string>
+	<string>playpass.direct.fmprefs</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundlePackageType</key>
@@ -19,6 +19,6 @@
 	<key>CFBundleVersion</key>
 	<string>1.0</string>
 	<key>NSPrincipalClass</key>
-	<string>SCRUBRootListController</string>
+	<string>DirectFMRootListController</string>
 </dict>
 </plist>

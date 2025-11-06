@@ -5,6 +5,7 @@
 #include <UIKit/UIWindow.h>
 #import <CommonCrypto/CommonDigest.h>
 #import "Scrobbler.h"
+#import "Constants.h"
 #import <UIKit/UIKit.h>
 #import <objc/runtime.h>
 
@@ -20,10 +21,11 @@ void initScrobbler(NSString *apiKey, NSString *apiSecret, NSString *username, NS
 	scrobbler.password = password;
 	scrobbler.loggedIn = false;
 	scrobbler.scrobbleAfter = scrobbleAfter;
-	scrobbler.selectedApps = apps;
+	// ensure selectedApps is set as a copy to avoid issues
+	scrobbler.selectedApps = apps ? [apps copy] : @[];
 	[scrobbler loadToken];
 
-	NSLog(@"[Scrubble] Initialized Scrobbler!");
+	NSLog(@"[Direct.FM] Initialized Scrobbler with %lu selected apps: %@", (unsigned long)[scrobbler.selectedApps count], scrobbler.selectedApps);
 }
 
 void updatePrefs() {
@@ -31,8 +33,8 @@ void updatePrefs() {
 
 	enabled = (prefs && [prefs objectForKey:@"enabled"] ? [[prefs valueForKey:@"enabled"] boolValue] : YES );
 
-	NSString *apiKey = [prefs objectForKey:@"apiKey"];
-	NSString *apiSecret = [prefs objectForKey:@"apiSecret"];
+	NSString *apiKey = @LASTFM_API_KEY;
+	NSString *apiSecret = @LASTFM_API_SECRET;
 	NSString *username = [prefs objectForKey:@"username"];
 	NSString *password = [prefs objectForKey:@"password"];
 	float scrobbleAfter = [prefs objectForKey:@"scrobbleAfter"] ? [[prefs objectForKey:@"scrobbleAfter"] floatValue] : 0.7;
@@ -42,8 +44,15 @@ void updatePrefs() {
 	NSMutableArray *apps = [[NSMutableArray alloc] init];
 	
 	if (selectedApps && selectedApps.count > 0) {
-		// use new format
-		[apps addObjectsFromArray:selectedApps];
+		// use new format - ensure all items are strings
+		for (id app in selectedApps) {
+			if ([app isKindOfClass:[NSString class]]) {
+				[apps addObject:app];
+			} else {
+				NSLog(@"[Direct.FM] Warning: Invalid app entry in selectedApps: %@", app);
+			}
+		}
+		NSLog(@"[Direct.FM] Loaded %lu apps from preferences", (unsigned long)[apps count]);
 	} else {
 		// fallback to old individual toggle switches for migration
 		BOOL enableAppleMusic = [prefs objectForKey:@"enableAppleMusic"] ? [[prefs objectForKey:@"enableAppleMusic"] boolValue] : YES;
@@ -57,11 +66,12 @@ void updatePrefs() {
 		// save migrated settings
 		[prefs setObject:[apps copy] forKey:@"selectedApps"];
 		[prefs synchronize];
+		NSLog(@"[Direct.FM] Migrated %lu apps from old format", (unsigned long)[apps count]);
 	}
 	
-	NSLog(@"[Scrubble] Enabled apps: %@", apps);
+	NSLog(@"[Direct.FM] Enabled apps (%lu): %@", (unsigned long)[apps count], apps);
 	
-	if (!apiKey || !apiSecret || !username || !password || !enabled) enabled = NO;
+	if (!username || !password || !enabled) enabled = NO;
 	else initScrobbler(apiKey, apiSecret, username, password, scrobbleAfter, apps);
 }
 
@@ -69,9 +79,9 @@ void updatePrefs() {
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
-		NSLog(@"[Scrubble] Scrubble started!");
+		NSLog(@"[Direct.FM] Direct.FM started!");
 
-		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)updatePrefs, CFSTR("fr.rootfs.scrubbleprefs-updated"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
+		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)updatePrefs, CFSTR("playpass.direct.fmprefs-updated"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
 		updatePrefs();
 		CFRunLoopRun();
 		return 0;

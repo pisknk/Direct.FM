@@ -7,7 +7,7 @@
     <true/>
     <key>keychain-access-groups</key>
     <array>
-        <string>fr.rootfs.scrubble</string>
+        <string>playpass.direct.fm</string>
     </array>        
 </dict>
 </plist>

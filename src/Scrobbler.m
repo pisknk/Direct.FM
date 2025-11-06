@@ -54,7 +54,7 @@ NSString *queryString(NSDictionary *items) {
 		completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             NSHTTPURLResponse *resp = (NSHTTPURLResponse*)response;
         	if (resp.statusCode == 403) [self tokenExpired];
-			else if (resp.statusCode != 200) NSLog(@"[Scrubble] An unknown error occured: Status code = %ld, data = %@", resp.statusCode, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+			else if (resp.statusCode != 200) NSLog(@"[Direct.FM] An unknown error occured: Status code = %ld, data = %@", resp.statusCode, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
 			else completionHandler(data, resp, error);
 		}];
 	[dataTask resume];
@@ -69,7 +69,7 @@ NSString *queryString(NSDictionary *items) {
 	} mutableCopy];
 
 	[self requestLastfm:dict completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error){
-		NSLog(@"[Scrubble] Updated now playing track to %@", music);
+		NSLog(@"[Direct.FM] Updated now playing track to %@", music);
 	}];
 } 
 
@@ -83,10 +83,10 @@ NSString *queryString(NSDictionary *items) {
 	} mutableCopy];
 
 	[self requestLastfm:dict completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error) {
-		NSLog(@"[Scrubble] Scrobbled track %@", music);
+		NSLog(@"[Direct.FM] Scrobbled track %@", music);
 		
 		// Update debug information
-		NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+		NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
 		NSInteger currentCount = [defaults integerForKey:@"scrobbleCount"];
 		[defaults setInteger:currentCount + 1 forKey:@"scrobbleCount"];
 		[defaults setObject:[NSString stringWithFormat:@"%@ - %@", artist, music] forKey:@"lastScrobbledTrack"];
@@ -99,14 +99,14 @@ NSString *queryString(NSDictionary *items) {
     self.token = nil;
     [self deleteToken];
     dispatch_async(dispatch_get_main_queue(), ^(void){
-        NSLog(@"[Scrubble] Reloading token");
+        NSLog(@"[Direct.FM] Reloading token");
         [self loadToken];
     });
 }
 
 -(void) loadToken {
 	if ([self loadTokenFromKeychain]) return;
-	NSLog(@"[Scrubble] Authenticating with last.fm...");
+	NSLog(@"[Direct.FM] Authenticating with last.fm...");
 
     NSString *sigContent = [NSString stringWithFormat:@"api_key%@method%@password%@username%@%@", self.apiKey, @"auth.getMobileSession", self.password, self.username, self.apiSecret];
 	NSString *sig = md5(sigContent);
@@ -158,26 +158,54 @@ NSString *queryString(NSDictionary *items) {
 -(void) musicDidChange:(NSNotification*)notification {
 	if (![[[notification userInfo] objectForKey:@"_MROriginatingNotification"] isEqualToString:@"_kMRNowPlayingPlaybackQueueChangedNotification"]) return;
 	
-	NSString *appBID = [[[notification userInfo] objectForKey:@"kMRNowPlayingClientUserInfoKey"] bundleIdentifier];
+	// extract bundle identifier from notification
+	id clientInfo = [[notification userInfo] objectForKey:@"kMRNowPlayingClientUserInfoKey"];
+	NSString *appBID = nil;
+	
+	if (clientInfo && [clientInfo respondsToSelector:@selector(bundleIdentifier)]) {
+		appBID = [clientInfo bundleIdentifier];
+	}
+	
+	// fallback: try to get from userInfo directly if available
+	if (!appBID) {
+		appBID = [[notification userInfo] objectForKey:@"kMRMediaRemoteNowPlayingInfoApplicationBundleIdentifier"];
+	}
+	
+	// if still no bundle ID, log and return
+	if (!appBID || [appBID length] == 0) {
+		NSLog(@"[Direct.FM] Could not extract bundle identifier from notification: %@", [notification userInfo]);
+		return;
+	}
 	
 	// Update current playing app debug info
-	NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+	NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
 	NSString *appName = @"Unknown";
 	if ([appBID isEqualToString:@"com.apple.Music"]) appName = @"Apple Music";
 	else if ([appBID isEqualToString:@"com.spotify.client"]) appName = @"Spotify";
 	else if ([appBID isEqualToString:@"com.google.ios.youtubemusic"]) appName = @"YouTube Music";
+	else if ([appBID isEqualToString:@"com.google.ios.youtube"]) appName = @"YouTube";
 	else appName = [NSString stringWithFormat:@"Other (%@)", appBID];
 	
 	[defaults setObject:appName forKey:@"currentPlayingApp"];
 	[defaults synchronize];
 	
-	NSLog(@"[Scrubble] Music changed from app: %@ (%@)", appName, appBID);
-	NSLog(@"[Scrubble] Selected apps: %@", self.selectedApps);
+	NSLog(@"[Direct.FM] Music changed from app: %@ (%@)", appName, appBID);
+	NSLog(@"[Direct.FM] Selected apps: %@", self.selectedApps);
+	NSLog(@"[Direct.FM] Selected apps count: %lu", (unsigned long)[self.selectedApps count]);
 	
-	if (![self.selectedApps containsObject:appBID]) {
-		NSLog(@"[Scrubble] App %@ not in selected apps, ignoring", appBID);
+	// check if app is in selected apps list
+	if (!self.selectedApps || [self.selectedApps count] == 0) {
+		NSLog(@"[Direct.FM] No apps selected, ignoring");
 		return;
 	}
+	
+	if (![self.selectedApps containsObject:appBID]) {
+		NSLog(@"[Direct.FM] App %@ (%@) not in selected apps list, ignoring", appName, appBID);
+		NSLog(@"[Direct.FM] Available selected apps: %@", self.selectedApps);
+		return;
+	}
+	
+	NSLog(@"[Direct.FM] App %@ (%@) is in selected apps, proceeding with scrobble", appName, appBID);
 
 	[self getCurrentlyPlayingMusicWithcompletionHandler:^(NSString *track, NSString *artist, NSString *album, NSDate *date, NSNumber *duration){
 		[self updateNowPlaying:track withArtist:artist album:album];
@@ -224,7 +252,7 @@ NSString *queryString(NSDictionary *items) {
 	if (status == errSecSuccess && result != NULL) {
 		self.token = [[NSString alloc] initWithData:(__bridge NSData*)result encoding:NSUTF8StringEncoding];
         [self registerObserver];
-		NSLog(@"[Scrubble] Found token in keychain!");
+		NSLog(@"[Direct.FM] Found token in keychain!");
 
 		CFRelease(result);
 

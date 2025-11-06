@@ -14,7 +14,7 @@
 			<key>key</key>
 			<string>enabled</string>
 			<key>defaults</key>
-			<string>fr.rootfs.scrubbleprefs</string>
+			<string>playpass.direct.fmprefs</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -28,11 +28,11 @@
 			<key>key</key>
 			<string>username</string>
 			<key>defaults</key>
-			<string>fr.rootfs.scrubbleprefs</string>
+			<string>playpass.direct.fmprefs</string>
 			<key>label</key>
 			<string>Username:</string>
 			<key>PostNotification</key>
-	        <string>fr.rootfs.scrubbleprefs-updated</string>
+	        <string>playpass.direct.fmprefs-updated</string>
 			<key>id</key>
 			<string>username</string>	
 		</dict>
@@ -42,59 +42,13 @@
 			<key>key</key>
 			<string>password</string>
 			<key>defaults</key>
-			<string>fr.rootfs.scrubbleprefs</string>
+			<string>playpass.direct.fmprefs</string>
 			<key>label</key>
 			<string>Password:</string>
 			<key>PostNotification</key>
-	        <string>fr.rootfs.scrubbleprefs-updated</string>
+	        <string>playpass.direct.fmprefs-updated</string>
 			<key>id</key>
 			<string>password</string>	
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>API</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSEditTextCell</string>
-			<key>key</key>
-			<string>apiKey</string>
-			<key>defaults</key>
-			<string>fr.rootfs.scrubbleprefs</string>
-			<key>label</key>
-			<string>API Key:</string>
-			<key>PostNotification</key>
-	        <string>fr.rootfs.scrubbleprefs-updated</string>
-			<key>id</key>
-			<string>apiKey</string>	
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSSecureEditTextCell</string>
-			<key>key</key>
-			<string>apiSecret</string>
-			<key>defaults</key>
-			<string>fr.rootfs.scrubbleprefs</string>
-			<key>label</key>
-			<string>API Secret:</string>
-			<key>PostNotification</key>
-	        <string>fr.rootfs.scrubbleprefs-updated</string>
-			<key>id</key>
-			<string>apiSecret</string>	
-		</dict>
-			<dict>
-			<key>cell</key>
-			<string>PSButtonCell</string>
-			<key>label</key>
-			<string>Get an API key</string>
-			<key>url</key>
-			<string>https://www.last.fm/api/account/create</string>
-			<key>action</key>
-			<string>open:</string>
 		</dict>
 
 		<dict>
@@ -106,9 +60,9 @@
             <key>cell</key>
             <string>PSButtonCell</string>
             <key>label</key>
-            <string>Test login</string>
+            <string>Login</string>
             <key>action</key>
-            <string>testLogin</string>
+            <string>login</string>
         </dict>
 
 		<dict>
@@ -148,7 +102,7 @@
 			<key>key</key>
 			<string>scrobbleAfter</string>
 			<key>defaults</key>
-			<string>fr.rootfs.scrubbleprefs</string>
+			<string>playpass.direct.fmprefs</string>
 			<key>default</key>
 			<real>0.7</real>
 			<key>min</key>
@@ -158,7 +112,7 @@
 			<key>showValue</key>
 			<true/>
 			<key>PostNotification</key>
-	        <string>fr.rootfs.scrubbleprefs-updated</string>
+	        <string>playpass.direct.fmprefs-updated</string>
 		</dict>
 
 		<dict>
@@ -255,7 +209,7 @@
 			<key>label</key>
 			<string>Source Code</string>
 			<key>url</key>
-			<string>https://github.com/R00tFS/Scrubble</string>
+			<string>https://github.com/pisknk/Direct.FM</string>
 			<key>action</key>
 			<string>open:</string>
 		</dict>
@@ -272,6 +226,6 @@
 		</dict>
 	</array>
 	<key>title</key>
-	<string>Scrubble</string>
+	<string>Direct.FM</string>
 </dict>
 </plist>

@@ -5,17 +5,17 @@
 	<key>entry</key>
 	<dict>
 		<key>bundle</key>
-		<string>ScrubblePrefs</string>
+		<string>DirectFMPrefs</string>
 		<key>cell</key>
 		<string>PSLinkCell</string>
 		<key>detail</key>
-		<string>SCRUBRootListController</string>
+		<string>DirectFMRootListController</string>
 		<key>icon</key>
 		<string>icon.png</string>
 		<key>isController</key>
 		<true/>
 		<key>label</key>
-		<string>Scrubble</string>
+		<string>Direct.FM</string>
 	</dict>
 </dict>
 </plist>

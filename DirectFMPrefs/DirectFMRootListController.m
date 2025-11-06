@@ -4,7 +4,8 @@
 #include <objc/objc.h>
 #include <UIKit/UIKit.h>
 #include <stdbool.h>
-#import "SCRUBRootListController.h"
+#import "DirectFMRootListController.h"
+#import "Constants.h"
 #import <spawn.h>
 #import <libroot.h>
 #import "include/NSTask.h"
@@ -41,7 +42,7 @@ NSString *queryString(NSDictionary *items) {
 	return components.URL.query ?: @"";
 }
 
-@implementation SCRUBRootListController
+@implementation DirectFMRootListController
 
 - (NSArray *)specifiers {
 	if (!_specifiers) {
@@ -54,7 +55,7 @@ NSString *queryString(NSDictionary *items) {
 }
 
 - (void)loadSelectedApps {
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
     NSArray *savedApps = [defaults arrayForKey:@"selectedApps"];
     
     if (savedApps) {
@@ -81,14 +82,14 @@ NSString *queryString(NSDictionary *items) {
 }
 
 - (NSString*)daemonStatus:(PSSpecifier*)sender {
-    NSLog(@"Checking Scrubble status");
+    NSLog(@"Checking Direct.FM status");
     @try{
         NSPipe *pipe = [NSPipe pipe];
         NSFileHandle *file = pipe.fileHandleForReading;
 
         NSTask *task = [[NSTask alloc] init];
         task.launchPath = JBROOT_PATH_NSSTRING(@"/bin/sh");
-        task.arguments = @[@"-c", [NSString stringWithFormat:@"%@ list | %@ scrubble | %@ '{print $1}'", JBROOT_PATH_NSSTRING(@"/usr/bin/launchctl"), JBROOT_PATH_NSSTRING(@"/usr/bin/grep"), JBROOT_PATH_NSSTRING(@"/usr/bin/awk")]];
+        task.arguments = @[@"-c", [NSString stringWithFormat:@"%@ list | %@ playpass.direct.fm | %@ '{print $1}'", JBROOT_PATH_NSSTRING(@"/usr/bin/launchctl"), JBROOT_PATH_NSSTRING(@"/usr/bin/grep"), JBROOT_PATH_NSSTRING(@"/usr/bin/awk")]];
         task.standardOutput = pipe;
         task.standardError = pipe;
 
@@ -99,7 +100,7 @@ NSString *queryString(NSDictionary *items) {
         NSString *output = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
         [file closeFile];
         
-        NSLog(@"Scrubble %@", output);
+        NSLog(@"Direct.FM %@", output);
 
         if (!output || [[output stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]] isEqualToString:@""]) return @"Stopped";
         
@@ -127,9 +128,9 @@ NSString *queryString(NSDictionary *items) {
 
 - (void)toggleDaemon {
     NSString *action = (!self.daemonRunning ? @"start" : @"stop");
-    NSString *command = [NSString stringWithFormat:@"sudo %@ %@ %@", JBROOT_PATH_NSSTRING(@"/usr/bin/launchctl"), action, @"fr.rootfs.scrubble"];
+    NSString *command = [NSString stringWithFormat:@"sudo %@ %@ %@", JBROOT_PATH_NSSTRING(@"/usr/bin/launchctl"), action, @"playpass.direct.fm"];
 
-    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"Scrubble" message:[NSString stringWithFormat:@"In order to %@ Scrubble, you need to paste this command into NewTerm. \n The default password is alpine.", action] preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"Direct.FM" message:[NSString stringWithFormat:@"In order to %@ Direct.FM, you need to paste this command into NewTerm. \n The default password is alpine.", action] preferredStyle:UIAlertControllerStyleAlert];
     UIAlertAction* openNewTermAction = [UIAlertAction actionWithTitle:@"Open NewTerm" style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {
         UIPasteboard.generalPasteboard.string = command;
         [[objc_getClass("LSApplicationWorkspace") performSelector:@selector(defaultWorkspace)] performSelector:@selector(openApplicationWithBundleID:) withObject:@"ws.hbang.Terminal"];
@@ -144,14 +145,14 @@ NSString *queryString(NSDictionary *items) {
 }
 
 - (NSString*)toggleDaemonLabel {
-    return (self.daemonRunning ? @"Stop Scrubble" : @"Start Scrubble");
+    return (self.daemonRunning ? @"Stop Direct.FM" : @"Start Direct.FM");
 }
 
--(void) testLogin {
+-(void) login {
     NSString *username = [self readPreferenceValue:[self specifierForID:@"username"]];
     NSString *password = [self readPreferenceValue:[self specifierForID:@"password"]];
-	NSString *apiKey = [self readPreferenceValue:[self specifierForID:@"apiKey"]];
-    NSString *apiSecret = [self readPreferenceValue:[self specifierForID:@"apiSecret"]];
+	NSString *apiKey = @LASTFM_API_KEY;
+    NSString *apiSecret = @LASTFM_API_SECRET;
 
     NSString *sigContent = [NSString stringWithFormat:@"api_key%@method%@password%@username%@%@", apiKey, @"auth.getMobileSession", password, username, apiSecret];
 	NSString *sig = md5(sigContent);
@@ -196,7 +197,7 @@ NSString *queryString(NSDictionary *items) {
     [statusMessage appendFormat:@"Daemon Status: %@\n", daemonStatus];
     
     // get debug info
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
     NSInteger scrobbleCount = [defaults integerForKey:@"scrobbleCount"];
     NSString *lastTrack = [defaults stringForKey:@"lastScrobbledTrack"] ?: @"None";
     NSString *currentApp = [defaults stringForKey:@"currentPlayingApp"] ?: @"None detected";
@@ -220,12 +221,12 @@ NSString *queryString(NSDictionary *items) {
     // test last.fm connectivity
     NSString *username = [self readPreferenceValue:[self specifierForID:@"username"]];
     NSString *password = [self readPreferenceValue:[self specifierForID:@"password"]];
-    NSString *apiKey = [self readPreferenceValue:[self specifierForID:@"apiKey"]];
-    NSString *apiSecret = [self readPreferenceValue:[self specifierForID:@"apiSecret"]];
+    NSString *apiKey = @LASTFM_API_KEY;
+    NSString *apiSecret = @LASTFM_API_SECRET;
     
-    if (!username || !password || !apiKey || !apiSecret) {
+    if (!username || !password) {
         [statusTitle setString:@"⚠️ Configuration Incomplete"];
-        [statusMessage appendString:@"Last.fm Status: Missing credentials"];
+        [statusMessage appendString:@"Last.fm Status: Missing username or password"];
         
         dispatch_async(dispatch_get_main_queue(), ^{
             [loadingAlert dismissViewControllerAnimated:NO completion:^{
@@ -296,25 +297,25 @@ NSString *queryString(NSDictionary *items) {
 
 // debugging methods
 - (NSString*)getScrobbleCount:(PSSpecifier*)sender {
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
     NSInteger count = [defaults integerForKey:@"scrobbleCount"];
     return [NSString stringWithFormat:@"%ld", (long)count];
 }
 
 - (NSString*)getLastScrobbledTrack:(PSSpecifier*)sender {
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
     NSString *lastTrack = [defaults stringForKey:@"lastScrobbledTrack"];
     return lastTrack ?: @"None";
 }
 
 - (NSString*)getCurrentPlayingApp:(PSSpecifier*)sender {
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
     NSString *currentApp = [defaults stringForKey:@"currentPlayingApp"];
     return currentApp ?: @"None detected";
 }
 
 - (void)resetScrobbleCount {
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
     [defaults setInteger:0 forKey:@"scrobbleCount"];
     [defaults removeObjectForKey:@"lastScrobbledTrack"];
     [defaults removeObjectForKey:@"currentPlayingApp"];
@@ -335,8 +336,8 @@ NSString *queryString(NSDictionary *items) {
 
 // app picker methods
 - (void)showAppPicker {
-    SCRUBAppPickerController *appPicker = [[SCRUBAppPickerController alloc] init];
-    appPicker.scrubbleRootController = self;
+    DirectFMAppPickerController *appPicker = [[DirectFMAppPickerController alloc] init];
+    appPicker.directFMRootController = self;
     
     [self.navigationController pushViewController:appPicker animated:YES];
 }
@@ -377,12 +378,12 @@ NSString *queryString(NSDictionary *items) {
 }
 
 - (void)saveSelectedApps {
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
     [defaults setObject:self.selectedAppBundleIDs forKey:@"selectedApps"];
     [defaults synchronize];
     
     // notify daemon of changes
-    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("fr.rootfs.scrubbleprefs-updated"), NULL, NULL, YES);
+    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("playpass.direct.fmprefs-updated"), NULL, NULL, YES);
 }
 
 - (NSArray *)getInstalledMusicApps {
@@ -420,7 +421,7 @@ NSString *queryString(NSDictionary *items) {
                     }
                 } @catch (NSException *exception) {
                     // if detection fails, we'll fall back to showing all apps
-                    NSLog(@"[Scrubble] App detection failed for %@: %@", bundleID, exception.reason);
+                    NSLog(@"[Direct.FM] App detection failed for %@: %@", bundleID, exception.reason);
                 }
             }
         }
@@ -428,7 +429,7 @@ NSString *queryString(NSDictionary *items) {
     
     // if detection failed or no apps were found, include all known apps
     if (musicApps.count == 0) {
-        NSLog(@"[Scrubble] App detection failed, showing all known apps");
+        NSLog(@"[Direct.FM] App detection failed, showing all known apps");
         for (NSString *bundleID in knownApps.allKeys) {
             [musicApps addObject:@{@"bundleID": bundleID, @"name": knownApps[bundleID]}];
         }
@@ -491,14 +492,14 @@ NSString *queryString(NSDictionary *items) {
 @end
 
 // implementation of app picker - fallback implementation that works without AltList headers
-@implementation SCRUBAppPickerController
+@implementation DirectFMAppPickerController
 
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"Select Apps";
     
     // load selected apps
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
     NSArray *selectedApps = [defaults arrayForKey:@"selectedApps"];
     if (selectedApps) {
         self.selectedApplications = [NSMutableSet setWithArray:selectedApps];
@@ -571,18 +572,18 @@ NSString *queryString(NSDictionary *items) {
 
 - (void)donePressed {
     // save selected apps
-    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"fr.rootfs.scrubbleprefs"];
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
     [defaults setObject:[self.selectedApplications allObjects] forKey:@"selectedApps"];
     [defaults synchronize];
     
     // notify daemon of changes
-    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("fr.rootfs.scrubbleprefs-updated"), NULL, NULL, YES);
+    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("playpass.direct.fmprefs-updated"), NULL, NULL, YES);
     
     // refresh parent controller
-    if (self.scrubbleRootController) {
-        [self.scrubbleRootController reloadSpecifier:[self.scrubbleRootController specifierForID:@"selectedAppsDisplay"]];
+    if (self.directFMRootController) {
+        [self.directFMRootController reloadSpecifier:[self.directFMRootController specifierForID:@"selectedAppsDisplay"]];
         // also update the selectedAppBundleIDs array
-        self.scrubbleRootController.selectedAppBundleIDs = [[self.selectedApplications allObjects] mutableCopy];
+        self.directFMRootController.selectedAppBundleIDs = [[self.selectedApplications allObjects] mutableCopy];
     }
     
     [self.navigationController popViewControllerAnimated:YES];
@@ -623,7 +624,7 @@ NSString *queryString(NSDictionary *items) {
                         }];
                     }
                 } @catch (NSException *exception) {
-                    NSLog(@"[Scrubble] Error processing app: %@", exception.reason);
+                    NSLog(@"[Direct.FM] Error processing app: %@", exception.reason);
                 }
             }
         }
