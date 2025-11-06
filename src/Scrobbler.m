@@ -29,8 +29,85 @@ NSString *queryString(NSDictionary *items) {
 		[queryItems addObject:[NSURLQueryItem queryItemWithName:key value:items[key]]];
 	}
 
-	components.queryItems = queryItems;
+    components.queryItems = queryItems;
 	return components.URL.query ?: @"";
+}
+
+// clean string by removing common tags and extra information
+NSString *cleanString(NSString *input) {
+	if (!input || [input length] == 0) return input;
+	
+	NSMutableString *cleaned = [input mutableCopy];
+	
+	// remove common patterns (order matters - more specific first)
+	NSArray *patternsToRemove = @[
+		// video available tags
+		@"\\s*•\\s*Video Available",
+		@"\\s*•\\s*VIDEO AVAILABLE",
+		@"\\s*-\\s*Video Available",
+		// explicit tags
+		@"\\s*\\[Explicit\\]",
+		@"\\s*\\(Explicit\\)",
+		@"\\s*-\\s*Explicit",
+		// single/ep tags
+		@"\\s*\\[Single\\]",
+		@"\\s*\\(Single\\)",
+		@"\\s*-\\s*Single",
+		@"\\s*\\[EP\\]",
+		@"\\s*\\(EP\\)",
+		@"\\s*-\\s*EP",
+		// remaster tags
+		@"\\s*\\[Remaster\\w*\\]",
+		@"\\s*\\(Remaster\\w*\\)",
+		@"\\s*-\\s*Remaster\\w*",
+		@"\\s*Remaster\\w*",
+		// year patterns (4 digits, with or without parentheses/brackets)
+		@"\\s*\\(\\d{4}\\)",
+		@"\\s*\\[\\d{4}\\]",
+		@"\\s*-\\s*\\d{4}",
+		@"\\s+\\d{4}\\b",
+		// other common tags
+		@"\\s*\\[Deluxe\\]",
+		@"\\s*\\(Deluxe\\)",
+		@"\\s*-\\s*Deluxe",
+		@"\\s*\\[Extended\\]",
+		@"\\s*\\(Extended\\)",
+		@"\\s*-\\s*Extended",
+		@"\\s*\\[Bonus Track\\]",
+		@"\\s*\\(Bonus Track\\)",
+		@"\\s*-\\s*Bonus Track",
+		@"\\s*\\[Live\\]",
+		@"\\s*\\(Live\\)",
+		@"\\s*-\\s*Live",
+		@"\\s*\\[Acoustic\\]",
+		@"\\s*\\(Acoustic\\)",
+		@"\\s*-\\s*Acoustic",
+	];
+	
+	// apply each pattern (recalculate range after each replacement since string length changes)
+	for (NSString *pattern in patternsToRemove) {
+		NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:pattern options:NSRegularExpressionCaseInsensitive error:nil];
+		if (regex) {
+			// keep replacing until no more matches found
+			NSUInteger replacements = 0;
+			do {
+				NSRange range = NSMakeRange(0, [cleaned length]);
+				replacements = [regex replaceMatchesInString:cleaned options:0 range:range withTemplate:@""];
+			} while (replacements > 0);
+		}
+	}
+	
+	// trim whitespace
+	cleaned = [[cleaned stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]] mutableCopy];
+	
+	// remove trailing separators (•, -, etc.)
+	NSCharacterSet *separators = [NSCharacterSet characterSetWithCharactersInString:@"•-–—"];
+	while ([cleaned length] > 0 && [separators characterIsMember:[cleaned characterAtIndex:[cleaned length] - 1]]) {
+		[cleaned deleteCharactersInRange:NSMakeRange([cleaned length] - 1, 1)];
+		cleaned = [[cleaned stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]] mutableCopy];
+	}
+	
+	return [cleaned copy];
 }
 
 @implementation Scrobbler
@@ -70,35 +147,62 @@ NSString *queryString(NSDictionary *items) {
 }
 
 -(void) updateNowPlaying:(NSString*)music withArtist:(NSString*)artist album:(NSString*)album {
+	// check if tag cleaning is enabled
+	NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
+	BOOL removeTags = [defaults objectForKey:@"removeExtraTags"] ? [[defaults objectForKey:@"removeExtraTags"] boolValue] : YES;
+	
+	// clean strings if enabled
+	NSString *cleanedTrack = removeTags ? cleanString(music) : music;
+	NSString *cleanedArtist = removeTags ? cleanString(artist) : artist;
+	NSString *cleanedAlbum = removeTags ? cleanString(album) : album;
+	
+	// log if cleaning changed anything
+	if (removeTags && (![cleanedTrack isEqualToString:music] || ![cleanedArtist isEqualToString:artist] || ![cleanedAlbum isEqualToString:album])) {
+		NSLog(@"[Direct.FM] Cleaned tags - Track: \"%@\" -> \"%@\", Artist: \"%@\" -> \"%@\", Album: \"%@\" -> \"%@\"", music, cleanedTrack, artist, cleanedArtist, album, cleanedAlbum);
+	}
+	
 	NSMutableDictionary *dict = [@{
-		@"track": music,
-		@"artist": artist,
-		@"album": album,
+		@"track": cleanedTrack,
+		@"artist": cleanedArtist,
+		@"album": cleanedAlbum,
 		@"method": @"track.updateNowPlaying",
 	} mutableCopy];
 
 	[self requestLastfm:dict completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error){
-		NSLog(@"[Direct.FM] Updated now playing track to %@", music);
+		NSLog(@"[Direct.FM] Updated now playing track to %@", cleanedTrack);
 	}];
 } 
 
 -(void) scrobbleTrack:(NSString*)music withArtist:(NSString*)artist album:(NSString*)album atTimestamp:(NSString*)timestamp {
+	// check if tag cleaning is enabled
+	NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
+	BOOL removeTags = [defaults objectForKey:@"removeExtraTags"] ? [[defaults objectForKey:@"removeExtraTags"] boolValue] : YES;
+	
+	// clean strings if enabled
+	NSString *cleanedTrack = removeTags ? cleanString(music) : music;
+	NSString *cleanedArtist = removeTags ? cleanString(artist) : artist;
+	NSString *cleanedAlbum = removeTags ? cleanString(album) : album;
+	
+	// log if cleaning changed anything
+	if (removeTags && (![cleanedTrack isEqualToString:music] || ![cleanedArtist isEqualToString:artist] || ![cleanedAlbum isEqualToString:album])) {
+		NSLog(@"[Direct.FM] Cleaned tags before scrobbling - Track: \"%@\" -> \"%@\", Artist: \"%@\" -> \"%@\", Album: \"%@\" -> \"%@\"", music, cleanedTrack, artist, cleanedArtist, album, cleanedAlbum);
+	}
+	
 	NSMutableDictionary *dict = [@{
-		@"track[0]": music,
-		@"artist[0]": artist,
-		@"album[0]": album,
+		@"track[0]": cleanedTrack,
+		@"artist[0]": cleanedArtist,
+		@"album[0]": cleanedAlbum,
 		@"timestamp[0]": timestamp,
 		@"method": @"track.scrobble"
 	} mutableCopy];
 
 	[self requestLastfm:dict completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error) {
-		NSLog(@"[Direct.FM] Scrobbled track %@", music);
+		NSLog(@"[Direct.FM] Scrobbled track %@", cleanedTrack);
 		
 		// Update debug information
-		NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
 		NSInteger currentCount = [defaults integerForKey:@"scrobbleCount"];
 		[defaults setInteger:currentCount + 1 forKey:@"scrobbleCount"];
-		[defaults setObject:[NSString stringWithFormat:@"%@ - %@", artist, music] forKey:@"lastScrobbledTrack"];
+		[defaults setObject:[NSString stringWithFormat:@"%@ - %@", cleanedArtist, cleanedTrack] forKey:@"lastScrobbledTrack"];
 		[defaults synchronize];
 	}];
 }

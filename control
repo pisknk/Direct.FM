@@ -1,9 +1,9 @@
 Package: playpass.direct.fm
 Name: Direct.FM
-Version: 1.5c
+Version: 1.6
 Architecture: iphoneos-arm
-Description: iOS tool to Scrobble your music to last.fm. Compatible with iOS 8.4.1+
-Maintainer: rootfs
+Description: iOS tool to Scrobble your music to last.fm. Forked from Scrubble by rootfs.
+Maintainer: pisknk
 Author: rootfs
 Section: Tweaks
 Depends: gawk, preferenceloader

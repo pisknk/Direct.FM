@@ -10,7 +10,7 @@
 			<key>default</key>
 			<true/>
 			<key>label</key>
-			<string>Enabled</string>
+			<string>Enable Direct.FM</string>
 			<key>key</key>
 			<string>enabled</string>
 			<key>defaults</key>
@@ -113,6 +113,30 @@
 			<true/>
 			<key>PostNotification</key>
 	        <string>playpass.direct.fmprefs-updated</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Automatically remove common tags like "• Video Available", "[Explicit]", "Single", years, "Remaster", etc. from artist and track names before scrobbling</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>label</key>
+			<string>Remove Extra Tags</string>
+			<key>key</key>
+			<string>removeExtraTags</string>
+			<key>defaults</key>
+			<string>playpass.direct.fmprefs</string>
+			<key>PostNotification</key>
+	        <string>playpass.direct.fmprefs-updated</string>
+			<key>id</key>
+			<string>removeExtraTags</string>
 		</dict>
 
 		<dict>
