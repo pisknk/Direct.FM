@@ -1,6 +1,6 @@
 Package: playpass.direct.fm
 Name: Direct.FM
-Version: 1.5b
+Version: 1.5c
 Architecture: iphoneos-arm
 Description: iOS tool to Scrobble your music to last.fm. Compatible with iOS 8.4.1+
 Maintainer: rootfs

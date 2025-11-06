@@ -1,8 +1,8 @@
-TARGET := iphone:clang:9.3:8.0
-ARCHS = armv7
+TARGET ?= iphone:clang:14.5:14.0
+ARCHS ?= arm64e
 
-# Disable modules and suppress deprecated warnings for iOS 9.3 SDK compatibility
-ADDITIONAL_OBJCFLAGS = -fno-modules -Wno-deprecated-module-dot-map -Wno-error -I$(THEOS)/include/MediaRemote -I$(THEOS)/sdks/iPhoneOS9.3.sdk/System/Library/PrivateFrameworks/MediaRemote.framework/Headers
+# conservative flags; avoid hardcoding old sdk include paths
+ADDITIONAL_OBJCFLAGS = -fno-modules -Wno-deprecated-module-dot-map -Wno-error
 
 include $(THEOS)/makefiles/common.mk
 
@@ -13,8 +13,9 @@ DirectFM_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -Wno-unused-variable -
 DirectFM_CODESIGN_FLAGS = -Sentitlements.plist
 DirectFM_INSTALL_PATH = /usr/local/libexec/
 
-# Link MediaRemote framework (using iOS 9.3 SDK with iOS 8.0 deployment target)
-DirectFM_LDFLAGS = -F$(THEOS)/sdks/iPhoneOS9.3.sdk/System/Library/PrivateFrameworks -F$(THEOS)/sdks/iPhoneOS9.3.sdk/System/Library/Frameworks -framework MediaRemote
+# link required frameworks; theos will resolve against the active sdk
+DirectFM_FRAMEWORKS = Foundation UIKit Security
+DirectFM_PRIVATE_FRAMEWORKS = MediaRemote
 
 include $(THEOS_MAKE_PATH)/tool.mk
 SUBPROJECTS += DirectFMPrefs
