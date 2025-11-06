@@ -1,6 +1,15 @@
 #import "Scrobbler.h"
 #include <Foundation/Foundation.h>
 
+// handle ios 8.4.1 mediaremote compatibility
+#if __arm__
+    // 32-bit ios - use direct framework path
+    #import <MediaRemote/MediaRemote.h>
+#else
+    // 64-bit ios - use private framework
+    #import <MediaRemote/MediaRemote.h>
+#endif
+
 
 NSString *md5(NSString *str) {
 	const char *cstr = [str UTF8String];
@@ -54,7 +63,7 @@ NSString *queryString(NSDictionary *items) {
 		completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
             NSHTTPURLResponse *resp = (NSHTTPURLResponse*)response;
         	if (resp.statusCode == 403) [self tokenExpired];
-			else if (resp.statusCode != 200) NSLog(@"[Direct.FM] An unknown error occured: Status code = %ld, data = %@", resp.statusCode, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+			else if (resp.statusCode != 200) NSLog(@"[Direct.FM] An unknown error occured: Status code = %ld, data = %@", (long)resp.statusCode, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
 			else completionHandler(data, resp, error);
 		}];
 	[dataTask resume];
@@ -151,7 +160,8 @@ NSString *queryString(NSDictionary *items) {
 }
 
 -(void) registerObserver {
-	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(musicDidChange:) name:(__bridge NSNotificationName)kMRMediaRemoteNowPlayingInfoDidChangeNotification object:nil];
+    // use MR_NOTIFICATION type which handles ios version differences
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(musicDidChange:) name:kMRMediaRemoteNowPlayingInfoDidChangeNotification object:nil];
 	MRMediaRemoteRegisterForNowPlayingNotifications(dispatch_get_main_queue());
 }
 
