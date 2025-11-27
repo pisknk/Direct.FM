@@ -185,7 +185,8 @@
         NSLog(@"[Direct.FM] File is readable: %d", isReadable);
         
         tracks = [NSArray arrayWithContentsOfFile:filePath];
-        NSLog(@"[Direct.FM] Loaded %lu scrobbled tracks from shared location", (unsigned long)[tracks ? [tracks count] : 0]);
+        NSUInteger trackCount = tracks ? [tracks count] : 0;
+        NSLog(@"[Direct.FM] Loaded %lu scrobbled tracks from shared location", (unsigned long)trackCount);
         
         if (!tracks) {
             NSLog(@"[Direct.FM] Failed to read plist file - checking attributes");
@@ -207,7 +208,8 @@
         NSLog(@"[Direct.FM] Checking old location: %@", oldFilePath);
         if ([fileManager fileExistsAtPath:oldFilePath]) {
             tracks = [NSArray arrayWithContentsOfFile:oldFilePath];
-            NSLog(@"[Direct.FM] Loaded %lu scrobbled tracks from old location", (unsigned long)[tracks ? [tracks count] : 0]);
+            NSUInteger trackCount = tracks ? [tracks count] : 0;
+            NSLog(@"[Direct.FM] Loaded %lu scrobbled tracks from old location", (unsigned long)trackCount);
             
             // migrate to new location if found in old location
             if (tracks && [tracks count] > 0) {
