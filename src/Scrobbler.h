@@ -16,6 +16,7 @@
 @property (atomic) bool loggedIn;
 -(void) registerObserver;
 -(void) musicDidChange:(NSNotification*)notification;
+-(void) checkCurrentlyPlayingMusic;
 -(void)loadToken;
 -(void) cacheScrobble:(NSDictionary*)scrobbleData;
 -(void) retryCachedScrobbles;
