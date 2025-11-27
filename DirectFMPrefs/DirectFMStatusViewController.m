@@ -101,7 +101,10 @@
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
-    [self reloadDaemonStatus];
+    // delay reload to avoid table view update conflicts
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self reloadDaemonStatus];
+    });
 }
 
 - (NSString*)daemonStatus:(PSSpecifier*)sender {
