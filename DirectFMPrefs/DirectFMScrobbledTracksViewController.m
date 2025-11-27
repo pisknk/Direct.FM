@@ -95,6 +95,18 @@
     UITableView *_tableView;
 }
 
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        // set identifier for Settings search
+        PSSpecifier *spec = [[PSSpecifier alloc] init];
+        [spec setProperty:@"DirectFMScrobbledTracks" forKey:@"PSIDKey"];
+        [spec setProperty:@"DirectFMScrobbledTracks" forKey:@"identifier"];
+        [self setSpecifier:spec];
+    }
+    return self;
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"Scrobbled Tracks";
@@ -155,14 +167,35 @@
 }
 
 - (void)loadScrobbledTracks {
+    NSArray *tracks = nil;
+    NSError *error = nil;
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    
     // try shared location first (new location)
     NSString *sharedPath = @"/var/mobile/Library/Preferences/";
     NSString *filePath = [sharedPath stringByAppendingPathComponent:@"DirectFMScrobbleHistory.plist"];
     
-    NSArray *tracks = nil;
-    if ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+    NSLog(@"[Direct.FM] Checking for scrobble history at: %@", filePath);
+    BOOL fileExists = [fileManager fileExistsAtPath:filePath];
+    NSLog(@"[Direct.FM] File exists: %d", fileExists);
+    
+    if (fileExists) {
+        // check if we can read it
+        BOOL isReadable = [fileManager isReadableFileAtPath:filePath];
+        NSLog(@"[Direct.FM] File is readable: %d", isReadable);
+        
         tracks = [NSArray arrayWithContentsOfFile:filePath];
-        NSLog(@"[Direct.FM] Loaded %lu scrobbled tracks from shared location", (unsigned long)[tracks count]);
+        NSLog(@"[Direct.FM] Loaded %lu scrobbled tracks from shared location", (unsigned long)[tracks ? [tracks count] : 0]);
+        
+        if (!tracks) {
+            NSLog(@"[Direct.FM] Failed to read plist file - checking attributes");
+            NSDictionary *attrs = [fileManager attributesOfItemAtPath:filePath error:&error];
+            if (error) {
+                NSLog(@"[Direct.FM] Error getting attributes: %@", error);
+            } else {
+                NSLog(@"[Direct.FM] File attributes: %@", attrs);
+            }
+        }
     }
     
     // fallback to old location if new location doesn't have data
@@ -171,22 +204,32 @@
         NSString *documentsDirectory = [paths objectAtIndex:0];
         NSString *oldFilePath = [documentsDirectory stringByAppendingPathComponent:@"DirectFMScrobbleHistory.plist"];
         
-        if ([[NSFileManager defaultManager] fileExistsAtPath:oldFilePath]) {
+        NSLog(@"[Direct.FM] Checking old location: %@", oldFilePath);
+        if ([fileManager fileExistsAtPath:oldFilePath]) {
             tracks = [NSArray arrayWithContentsOfFile:oldFilePath];
-            NSLog(@"[Direct.FM] Loaded %lu scrobbled tracks from old location", (unsigned long)[tracks count]);
+            NSLog(@"[Direct.FM] Loaded %lu scrobbled tracks from old location", (unsigned long)[tracks ? [tracks count] : 0]);
             
             // migrate to new location if found in old location
             if (tracks && [tracks count] > 0) {
-                [[NSFileManager defaultManager] copyItemAtPath:oldFilePath toPath:filePath error:nil];
-                NSLog(@"[Direct.FM] Migrated scrobble history to shared location");
+                NSError *copyError = nil;
+                BOOL copied = [fileManager copyItemAtPath:oldFilePath toPath:filePath error:&copyError];
+                if (copied) {
+                    NSLog(@"[Direct.FM] Migrated scrobble history to shared location");
+                } else {
+                    NSLog(@"[Direct.FM] Failed to migrate: %@", copyError);
+                }
             }
+        } else {
+            NSLog(@"[Direct.FM] Old location file does not exist");
         }
     }
     
     _scrobbledTracks = tracks ?: @[];
     
+    NSLog(@"[Direct.FM] Final scrobbled tracks count: %lu", (unsigned long)[_scrobbledTracks count]);
+    
     if ([_scrobbledTracks count] == 0) {
-        NSLog(@"[Direct.FM] No scrobbled tracks found at: %@", filePath);
+        NSLog(@"[Direct.FM] WARNING: No scrobbled tracks found. Checked paths: %@ and old location", filePath);
     }
 }
 

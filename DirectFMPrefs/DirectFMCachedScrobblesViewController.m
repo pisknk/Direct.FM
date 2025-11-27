@@ -78,6 +78,18 @@
     UITableView *_tableView;
 }
 
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        // set identifier for Settings search
+        PSSpecifier *spec = [[PSSpecifier alloc] init];
+        [spec setProperty:@"DirectFMCachedScrobbles" forKey:@"PSIDKey"];
+        [spec setProperty:@"DirectFMCachedScrobbles" forKey:@"identifier"];
+        [self setSpecifier:spec];
+    }
+    return self;
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"Cached Scrobbles";
@@ -138,17 +150,37 @@
 }
 
 - (void)loadCachedScrobbles {
+    NSArray *cached = nil;
+    NSError *error = nil;
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    
     // try shared location first (new location)
     NSString *sharedPath = @"/var/mobile/Library/Preferences/";
     NSString *filePath = [sharedPath stringByAppendingPathComponent:@"DirectFMScrobbleCache.plist"];
     
-    NSArray *cached = nil;
-    if ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+    NSLog(@"[Direct.FM] Checking for cached scrobbles at: %@", filePath);
+    BOOL fileExists = [fileManager fileExistsAtPath:filePath];
+    NSLog(@"[Direct.FM] File exists: %d", fileExists);
+    
+    if (fileExists) {
+        // check if we can read it
+        BOOL isReadable = [fileManager isReadableFileAtPath:filePath];
+        NSLog(@"[Direct.FM] File is readable: %d", isReadable);
+        
         cached = [NSArray arrayWithContentsOfFile:filePath];
         if (cached && [cached isKindOfClass:[NSArray class]]) {
             NSLog(@"[Direct.FM] Loaded %lu cached scrobbles from shared location", (unsigned long)[cached count]);
         } else {
+            NSLog(@"[Direct.FM] Failed to read plist file or invalid format");
             cached = nil;
+            
+            // check attributes
+            NSDictionary *attrs = [fileManager attributesOfItemAtPath:filePath error:&error];
+            if (error) {
+                NSLog(@"[Direct.FM] Error getting attributes: %@", error);
+            } else {
+                NSLog(@"[Direct.FM] File attributes: %@", attrs);
+            }
         }
     }
     
@@ -158,24 +190,34 @@
         NSString *documentsDirectory = [paths objectAtIndex:0];
         NSString *oldFilePath = [documentsDirectory stringByAppendingPathComponent:@"DirectFMScrobbleCache.plist"];
         
-        if ([[NSFileManager defaultManager] fileExistsAtPath:oldFilePath]) {
+        NSLog(@"[Direct.FM] Checking old location: %@", oldFilePath);
+        if ([fileManager fileExistsAtPath:oldFilePath]) {
             cached = [NSArray arrayWithContentsOfFile:oldFilePath];
             if (cached && [cached isKindOfClass:[NSArray class]]) {
                 NSLog(@"[Direct.FM] Loaded %lu cached scrobbles from old location", (unsigned long)[cached count]);
                 
                 // migrate to new location if found in old location
                 if ([cached count] > 0) {
-                    [[NSFileManager defaultManager] copyItemAtPath:oldFilePath toPath:filePath error:nil];
-                    NSLog(@"[Direct.FM] Migrated cached scrobbles to shared location");
+                    NSError *copyError = nil;
+                    BOOL copied = [fileManager copyItemAtPath:oldFilePath toPath:filePath error:&copyError];
+                    if (copied) {
+                        NSLog(@"[Direct.FM] Migrated cached scrobbles to shared location");
+                    } else {
+                        NSLog(@"[Direct.FM] Failed to migrate: %@", copyError);
+                    }
                 }
             }
+        } else {
+            NSLog(@"[Direct.FM] Old location file does not exist");
         }
     }
     
     _cachedScrobbles = cached ?: @[];
     
+    NSLog(@"[Direct.FM] Final cached scrobbles count: %lu", (unsigned long)[_cachedScrobbles count]);
+    
     if ([_cachedScrobbles count] == 0) {
-        NSLog(@"[Direct.FM] No cached scrobbles found at: %@", filePath);
+        NSLog(@"[Direct.FM] WARNING: No cached scrobbles found. Checked paths: %@ and old location", filePath);
     }
 }
 
