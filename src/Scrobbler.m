@@ -653,9 +653,15 @@ NSString *cleanString(NSString *input) {
 		NSLog(@"[Direct.FM] App %@ (%@) is in selected apps, proceeding with scrobble", appName, appBID);
 
 		[self getCurrentlyPlayingMusicWithcompletionHandler:^(NSString *track, NSString *artist, NSString *album, NSDate *date, NSNumber *duration){
-			if (!track || !artist || !album) {
-				NSLog(@"[Direct.FM] musicDidChange: missing track info - track: %@, artist: %@, album: %@", track, artist, album);
+			// only require track and artist - album is optional
+			if (!track || !artist) {
+				NSLog(@"[Direct.FM] musicDidChange: missing required track info - track: %@, artist: %@, album: %@", track, artist, album ?: @"(nil)");
 				return;
+			}
+			
+			// use empty string if album is nil
+			if (!album) {
+				album = @"";
 			}
 			
 			NSLog(@"[Direct.FM] musicDidChange: Got track info - Track: %@, Artist: %@, Album: %@, Duration: %@", track, artist, album, duration);
@@ -683,9 +689,15 @@ NSString *cleanString(NSString *input) {
 						dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delaySeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 							NSLog(@"[Direct.FM] musicDidChange: Delay completed, checking if track is still playing...");
 							[self getCurrentlyPlayingMusicWithcompletionHandler:^(NSString *currentTrack, NSString *currentArtist, NSString *currentAlbum, NSDate *currentDate, NSNumber *currentDuration){
-								if (!currentTrack || !currentArtist || !currentAlbum) {
-									NSLog(@"[Direct.FM] musicDidChange: missing current track info for scrobble check");
+								// only require track and artist - album is optional
+								if (!currentTrack || !currentArtist) {
+									NSLog(@"[Direct.FM] musicDidChange: missing current track info for scrobble check - track: %@, artist: %@, album: %@", currentTrack, currentArtist, currentAlbum ?: @"(nil)");
 									return;
+								}
+								
+								// use empty string if album is nil
+								if (!currentAlbum) {
+									currentAlbum = @"";
 								}
 								
 							NSLog(@"[Direct.FM] musicDidChange: Current track - Track: %@, Artist: %@, Album: %@", currentTrack, currentArtist, currentAlbum);
