@@ -161,13 +161,15 @@
 
 		<dict>
 			<key>cell</key>
-			<string>PSTitleValueCell</string>
+			<string>PSButtonCell</string>
 			<key>label</key>
 			<string>Total Scrobbles</string>
 			<key>get</key>
 			<string>getScrobbleCount:</string>
 			<key>id</key>
 			<string>scrobbleCount</string>
+			<key>action</key>
+			<string>showScrobbledTracks</string>
 		</dict>
 
 		<dict>

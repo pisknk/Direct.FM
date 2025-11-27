@@ -4,7 +4,7 @@ include $(THEOS)/makefiles/common.mk
 
 BUNDLE_NAME = DirectFMPrefs
 
-DirectFMPrefs_FILES = DirectFMRootListController.m
+DirectFMPrefs_FILES = DirectFMRootListController.m DirectFMScrobbledTracksViewController.m
 DirectFMPrefs_FRAMEWORKS = UIKit
 DirectFMPrefs_PRIVATE_FRAMEWORKS = Preferences
 

@@ -119,6 +119,13 @@ NSString *cleanString(NSString *input) {
 	return [documentsDirectory stringByAppendingPathComponent:@"DirectFMScrobbleCache.plist"];
 }
 
+// scrobble history file path helper
+-(NSString*) historyFilePath {
+	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+	NSString *documentsDirectory = [paths objectAtIndex:0];
+	return [documentsDirectory stringByAppendingPathComponent:@"DirectFMScrobbleHistory.plist"];
+}
+
 // load cached scrobbles from disk
 -(NSMutableArray*) loadCachedScrobbles {
 	NSString *filePath = [self cacheFilePath];
@@ -156,12 +163,139 @@ NSString *cleanString(NSString *input) {
 	return [cached count];
 }
 
+// save scrobble to history
+-(void) saveScrobbleToHistory:(NSString*)track artist:(NSString*)artist album:(NSString*)album timestamp:(NSString*)timestamp {
+	NSMutableArray *history = [[self loadScrobbleHistory] mutableCopy];
+	
+	NSDictionary *scrobbleEntry = @{
+		@"track": track ?: @"",
+		@"artist": artist ?: @"",
+		@"album": album ?: @"",
+		@"timestamp": timestamp ?: @"",
+		@"date": [[NSDate date] description]
+	};
+	
+	[history insertObject:scrobbleEntry atIndex:0]; // add to beginning
+	
+	// limit history to last 1000 scrobbles
+	if ([history count] > 1000) {
+		[history removeObjectsInRange:NSMakeRange(1000, [history count] - 1000)];
+	}
+	
+	NSString *filePath = [self historyFilePath];
+	[history writeToFile:filePath atomically:YES];
+}
+
+// load scrobble history
+-(NSArray*) loadScrobbleHistory {
+	NSString *filePath = [self historyFilePath];
+	if ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+		NSArray *history = [NSArray arrayWithContentsOfFile:filePath];
+		if (history) {
+			return history;
+		}
+	}
+	return [[NSArray alloc] init];
+}
+
+// unscrobble a track from last.fm
+-(void) unscrobbleTrack:(NSString*)track artist:(NSString*)artist timestamp:(NSString*)timestamp completionHandler:(void(^)(BOOL success, NSError *error))completionHandler {
+	NSMutableDictionary *dict = [@{
+		@"track": track,
+		@"artist": artist,
+		@"timestamp": timestamp,
+		@"method": @"track.unscrobble"
+	} mutableCopy];
+	
+	[self requestLastfm:dict completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error) {
+		BOOL success = NO;
+		if (!error && response && response.statusCode == 200) {
+			success = YES;
+			NSLog(@"[Direct.FM] Unscrobbled track: %@ - %@", artist, track);
+			
+			// remove from history
+			NSMutableArray *history = [[self loadScrobbleHistory] mutableCopy];
+			NSMutableArray *toRemove = [[NSMutableArray alloc] init];
+			for (NSDictionary *entry in history) {
+				if ([[entry objectForKey:@"track"] isEqualToString:track] && 
+					[[entry objectForKey:@"artist"] isEqualToString:artist] &&
+					[[entry objectForKey:@"timestamp"] isEqualToString:timestamp]) {
+					[toRemove addObject:entry];
+				}
+			}
+			[history removeObjectsInArray:toRemove];
+			
+			NSString *filePath = [self historyFilePath];
+			[history writeToFile:filePath atomically:YES];
+			
+			// update count
+			NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:PREFS_BUNDLE_ID];
+			NSInteger currentCount = [defaults integerForKey:@"scrobbleCount"];
+			if (currentCount > 0) {
+				[defaults setInteger:currentCount - [toRemove count] forKey:@"scrobbleCount"];
+				[defaults synchronize];
+			}
+		} else {
+			NSLog(@"[Direct.FM] Failed to unscrobble track: %@ - %@, Error: %@", artist, track, error);
+		}
+		
+		if (completionHandler) {
+			completionHandler(success, error);
+		}
+	}];
+}
+
 // check if network is available
 -(BOOL) isNetworkAvailable {
 	// use reachability or simple connectivity check
 	// for simplicity, we'll assume network is available if we can create a session
 	// the actual request will fail gracefully if network is unavailable
 	return YES; // let the actual request determine connectivity
+}
+
+// helper method to process a single scrobble at index (avoids retain cycle)
+-(void) processCachedScrobbleAtIndex:(NSInteger)index 
+                            fromCache:(NSArray*)cached 
+                      failedScrobbles:(NSMutableArray*)failedScrobbles 
+                         successCount:(NSInteger*)successCount 
+                            onQueue:(dispatch_queue_t)queue {
+	if (index >= [cached count]) {
+		// all done - save results
+		[self saveCachedScrobbles:failedScrobbles];
+		
+		// update status
+		NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:PREFS_BUNDLE_ID];
+		NSString *status = [NSString stringWithFormat:@"Retried %ld scrobbles, %ld succeeded, %ld failed", (long)[cached count], (long)*successCount, (long)[failedScrobbles count]];
+		[defaults setObject:status forKey:@"lastCacheRetryStatus"];
+		[defaults synchronize];
+		
+		NSLog(@"[Direct.FM] Cache retry complete: %@", status);
+		return;
+	}
+	
+	NSDictionary *scrobbleData = cached[index];
+	NSMutableDictionary *params = [scrobbleData mutableCopy];
+	
+	[self requestLastfm:params completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error) {
+		dispatch_async(queue, ^{
+			if (error || !response || response.statusCode != 200) {
+				[failedScrobbles addObject:scrobbleData];
+				NSLog(@"[Direct.FM] Failed to retry cached scrobble: %@ - %@", scrobbleData[@"artist[0]"], scrobbleData[@"track[0]"]);
+			} else {
+				(*successCount)++;
+				NSLog(@"[Direct.FM] Successfully retried cached scrobble: %@ - %@", scrobbleData[@"artist[0]"], scrobbleData[@"track[0]"]);
+			}
+			
+			// small delay between requests to avoid rate limiting, then process next
+			dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), queue, ^{
+				[self processCachedScrobbleAtIndex:index + 1 
+				                          fromCache:cached 
+				                    failedScrobbles:failedScrobbles 
+				                       successCount:successCount 
+				                          onQueue:queue];
+			});
+		});
+	}];
 }
 
 // retry cached scrobbles
@@ -179,57 +313,17 @@ NSString *cleanString(NSString *input) {
 	
 	NSMutableArray *failedScrobbles = [[NSMutableArray alloc] init];
 	__block NSInteger successCount = 0;
-	NSInteger totalCount = [cached count];
 	
 	// process scrobbles sequentially to avoid rate limiting
 	dispatch_queue_t retryQueue = dispatch_queue_create("com.directfm.retry", DISPATCH_QUEUE_SERIAL);
 	
-	// use a recursive function to process them one at a time
-	// use __weak to avoid retain cycle
-	__weak typeof(self) weakSelf = self;
-	__block void (^processNext)(NSInteger index);
-	processNext = ^(NSInteger index) {
-		typeof(self) strongSelf = weakSelf;
-		if (!strongSelf) return;
-		
-		if (index >= totalCount) {
-			// all done - save results
-			[strongSelf saveCachedScrobbles:failedScrobbles];
-			
-			// update status
-			NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:PREFS_BUNDLE_ID];
-			NSString *status = [NSString stringWithFormat:@"Retried %ld scrobbles, %ld succeeded, %ld failed", (long)totalCount, (long)successCount, (long)[failedScrobbles count]];
-			[defaults setObject:status forKey:@"lastCacheRetryStatus"];
-			[defaults synchronize];
-			
-			NSLog(@"[Direct.FM] Cache retry complete: %@", status);
-			return;
-		}
-		
-		NSDictionary *scrobbleData = cached[index];
-		NSMutableDictionary *params = [scrobbleData mutableCopy];
-		
-		[strongSelf requestLastfm:params completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error) {
-			dispatch_async(retryQueue, ^{
-				if (error || !response || response.statusCode != 200) {
-					[failedScrobbles addObject:scrobbleData];
-					NSLog(@"[Direct.FM] Failed to retry cached scrobble: %@ - %@", scrobbleData[@"artist[0]"], scrobbleData[@"track[0]"]);
-				} else {
-					successCount++;
-					NSLog(@"[Direct.FM] Successfully retried cached scrobble: %@ - %@", scrobbleData[@"artist[0]"], scrobbleData[@"track[0]"]);
-				}
-				
-				// small delay between requests to avoid rate limiting
-				dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), retryQueue, ^{
-					processNext(index + 1);
-				});
-			});
-		}];
-	};
-	
 	// start processing from index 0
 	dispatch_async(retryQueue, ^{
-		processNext(0);
+		[self processCachedScrobbleAtIndex:0 
+		                          fromCache:cached 
+		                    failedScrobbles:failedScrobbles 
+		                       successCount:&successCount 
+		                          onQueue:retryQueue];
 	});
 }
 
@@ -339,6 +433,9 @@ NSString *cleanString(NSString *input) {
 			[self cacheScrobble:dict];
 		} else {
 			NSLog(@"[Direct.FM] Scrobbled track %@", cleanedTrack);
+			
+			// save to history
+			[self saveScrobbleToHistory:cleanedTrack artist:cleanedArtist album:cleanedAlbum timestamp:timestamp];
 			
 			// Update debug information
 			NSInteger currentCount = [defaults integerForKey:@"scrobbleCount"];

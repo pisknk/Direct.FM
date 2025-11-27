@@ -5,6 +5,7 @@
 #include <UIKit/UIKit.h>
 #include <stdbool.h>
 #import "DirectFMRootListController.h"
+#import "DirectFMScrobbledTracksViewController.h"
 #import "Constants.h"
 #import <spawn.h>
 #import <libroot.h>
@@ -376,6 +377,11 @@ NSString *queryString(NSDictionary *items) {
     NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
     NSInteger count = [defaults integerForKey:@"scrobbleCount"];
     return [NSString stringWithFormat:@"%ld", (long)count];
+}
+
+- (void)showScrobbledTracks {
+    DirectFMScrobbledTracksViewController *tracksVC = [[DirectFMScrobbledTracksViewController alloc] init];
+    [self.navigationController pushViewController:tracksVC animated:YES];
 }
 
 - (NSString*)getLastScrobbledTrack:(PSSpecifier*)sender {
