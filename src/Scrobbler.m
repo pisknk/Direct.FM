@@ -114,16 +114,24 @@ NSString *cleanString(NSString *input) {
 
 // cache file path helper
 -(NSString*) cacheFilePath {
-	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-	NSString *documentsDirectory = [paths objectAtIndex:0];
-	return [documentsDirectory stringByAppendingPathComponent:@"DirectFMScrobbleCache.plist"];
+	// use shared location accessible by both daemon and preferences bundle
+	NSString *sharedPath = @"/var/mobile/Library/Preferences/";
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	if (![fileManager fileExistsAtPath:sharedPath]) {
+		[fileManager createDirectoryAtPath:sharedPath withIntermediateDirectories:YES attributes:nil error:nil];
+	}
+	return [sharedPath stringByAppendingPathComponent:@"DirectFMScrobbleCache.plist"];
 }
 
 // scrobble history file path helper
 -(NSString*) historyFilePath {
-	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-	NSString *documentsDirectory = [paths objectAtIndex:0];
-	return [documentsDirectory stringByAppendingPathComponent:@"DirectFMScrobbleHistory.plist"];
+	// use shared location accessible by both daemon and preferences bundle
+	NSString *sharedPath = @"/var/mobile/Library/Preferences/";
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	if (![fileManager fileExistsAtPath:sharedPath]) {
+		[fileManager createDirectoryAtPath:sharedPath withIntermediateDirectories:YES attributes:nil error:nil];
+	}
+	return [sharedPath stringByAppendingPathComponent:@"DirectFMScrobbleHistory.plist"];
 }
 
 // load cached scrobbles from disk

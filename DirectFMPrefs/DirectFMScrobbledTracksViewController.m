@@ -99,9 +99,6 @@
     [super viewDidLoad];
     self.title = @"Scrobbled Tracks";
     
-    // load scrobbled tracks
-    [self loadScrobbledTracks];
-    
     // create table view
     _tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
     _tableView.delegate = self;
@@ -113,27 +110,54 @@
     
     // register cell
     [_tableView registerClass:[DirectFMScrobbledTrackCell class] forCellReuseIdentifier:@"ScrobbleCell"];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
+    [super viewWillAppear:animated];
+    // reload scrobbled tracks when view appears (in case new scrobbles were added)
+    [self loadScrobbledTracks];
+    [_tableView reloadData];
     
-    // show empty state if no tracks
+    // show/hide empty state
     if ([_scrobbledTracks count] == 0) {
-        UILabel *emptyLabel = [[UILabel alloc] init];
-        emptyLabel.text = @"No scrobbled tracks yet";
-        emptyLabel.textAlignment = NSTextAlignmentCenter;
-        emptyLabel.textColor = [UIColor grayColor];
-        emptyLabel.translatesAutoresizingMaskIntoConstraints = NO;
-        [self.view addSubview:emptyLabel];
+        // check if empty label already exists
+        UILabel *emptyLabel = nil;
+        for (UIView *subview in self.view.subviews) {
+            if ([subview isKindOfClass:[UILabel class]] && [((UILabel*)subview).text isEqualToString:@"No scrobbled tracks yet"]) {
+                emptyLabel = (UILabel*)subview;
+                break;
+            }
+        }
         
-        [NSLayoutConstraint activateConstraints:@[
-            [emptyLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
-            [emptyLabel.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor]
-        ]];
+        if (!emptyLabel) {
+            emptyLabel = [[UILabel alloc] init];
+            emptyLabel.text = @"No scrobbled tracks yet";
+            emptyLabel.textAlignment = NSTextAlignmentCenter;
+            emptyLabel.textColor = [UIColor grayColor];
+            emptyLabel.translatesAutoresizingMaskIntoConstraints = NO;
+            [self.view addSubview:emptyLabel];
+            
+            [NSLayoutConstraint activateConstraints:@[
+                [emptyLabel.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+                [emptyLabel.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor]
+            ]];
+        }
+        emptyLabel.hidden = NO;
+    } else {
+        // hide empty label if tracks exist
+        for (UIView *subview in self.view.subviews) {
+            if ([subview isKindOfClass:[UILabel class]] && [((UILabel*)subview).text isEqualToString:@"No scrobbled tracks yet"]) {
+                subview.hidden = YES;
+                break;
+            }
+        }
     }
 }
 
 - (void)loadScrobbledTracks {
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    NSString *documentsDirectory = [paths objectAtIndex:0];
-    NSString *filePath = [documentsDirectory stringByAppendingPathComponent:@"DirectFMScrobbleHistory.plist"];
+    // use same shared location as daemon
+    NSString *sharedPath = @"/var/mobile/Library/Preferences/";
+    NSString *filePath = [sharedPath stringByAppendingPathComponent:@"DirectFMScrobbleHistory.plist"];
     
     if ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
         _scrobbledTracks = [NSArray arrayWithContentsOfFile:filePath];
