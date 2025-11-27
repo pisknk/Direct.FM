@@ -94,6 +94,11 @@
     [super viewDidLoad];
     self.title = @"Cached Scrobbles";
     
+    // remove any existing subviews from PSListController
+    for (UIView *subview in self.view.subviews) {
+        [subview removeFromSuperview];
+    }
+    
     // create table view
     _tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
     _tableView.delegate = self;
@@ -101,17 +106,28 @@
     _tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     _tableView.rowHeight = 80;
     _tableView.allowsSelection = NO;
+    if (@available(iOS 13.0, *)) {
+        _tableView.backgroundColor = [UIColor systemBackgroundColor];
+    } else {
+        _tableView.backgroundColor = [UIColor whiteColor];
+    }
     [self.view addSubview:_tableView];
     
     // register cell
     [_tableView registerClass:[DirectFMCachedScrobbleCell class] forCellReuseIdentifier:@"CachedScrobbleCell"];
+    
+    // ensure table view is on top
+    [self.view bringSubviewToFront:_tableView];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
+    // ensure table view frame is correct
+    _tableView.frame = self.view.bounds;
     // reload cached scrobbles when view appears
     [self loadCachedScrobbles];
     [_tableView reloadData];
+    NSLog(@"[Direct.FM] Cached viewWillAppear - table view frame: %@, cached count: %lu", NSStringFromCGRect(_tableView.frame), (unsigned long)[_cachedScrobbles count]);
     
     // show/hide empty state
     if ([_cachedScrobbles count] == 0) {
@@ -231,7 +247,12 @@
     }
 }
 
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    NSLog(@"[Direct.FM] Cached numberOfRowsInSection called, returning: %lu", (unsigned long)[_cachedScrobbles count]);
     return [_cachedScrobbles count];
 }
 

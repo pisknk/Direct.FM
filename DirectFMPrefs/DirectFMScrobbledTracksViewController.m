@@ -111,6 +111,11 @@
     [super viewDidLoad];
     self.title = @"Scrobbled Tracks";
     
+    // remove any existing subviews from PSListController
+    for (UIView *subview in self.view.subviews) {
+        [subview removeFromSuperview];
+    }
+    
     // create table view
     _tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
     _tableView.delegate = self;
@@ -118,17 +123,28 @@
     _tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     _tableView.rowHeight = 80;
     _tableView.allowsSelection = NO;
+    if (@available(iOS 13.0, *)) {
+        _tableView.backgroundColor = [UIColor systemBackgroundColor];
+    } else {
+        _tableView.backgroundColor = [UIColor whiteColor];
+    }
     [self.view addSubview:_tableView];
     
     // register cell
     [_tableView registerClass:[DirectFMScrobbledTrackCell class] forCellReuseIdentifier:@"ScrobbleCell"];
+    
+    // ensure table view is on top
+    [self.view bringSubviewToFront:_tableView];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
     [super viewWillAppear:animated];
+    // ensure table view frame is correct
+    _tableView.frame = self.view.bounds;
     // reload scrobbled tracks when view appears (in case new scrobbles were added)
     [self loadScrobbledTracks];
     [_tableView reloadData];
+    NSLog(@"[Direct.FM] viewWillAppear - table view frame: %@, tracks count: %lu", NSStringFromCGRect(_tableView.frame), (unsigned long)[_scrobbledTracks count]);
     
     // show/hide empty state
     if ([_scrobbledTracks count] == 0) {
@@ -245,17 +261,25 @@
     }
 }
 
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return 1;
+}
+
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    NSLog(@"[Direct.FM] numberOfRowsInSection called, returning: %lu", (unsigned long)[_scrobbledTracks count]);
     return [_scrobbledTracks count];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    DirectFMScrobbledTrackCell *cell = [tableView dequeueReusableCellWithIdentifier:@"ScrobbleCell"];
+    NSLog(@"[Direct.FM] cellForRowAtIndexPath called for row: %ld", (long)indexPath.row);
+    
+    DirectFMScrobbledTrackCell *cell = [tableView dequeueReusableCellWithIdentifier:@"ScrobbleCell" forIndexPath:indexPath];
     if (!cell) {
         cell = [[DirectFMScrobbledTrackCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"ScrobbleCell"];
     }
     
     NSDictionary *track = _scrobbledTracks[indexPath.row];
+    NSLog(@"[Direct.FM] Track data: %@", track);
     
     cell.trackLabel.text = track[@"track"] ?: @"Unknown Track";
     cell.artistLabel.text = track[@"artist"] ?: @"Unknown Artist";
