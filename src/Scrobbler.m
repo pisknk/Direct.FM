@@ -703,28 +703,47 @@ NSString *cleanString(NSString *input) {
 							NSString *cleanedOriginalArtist = removeTags ? cleanString(artist) : artist;
 							NSString *cleanedOriginalAlbum = removeTags ? cleanString(album) : album;
 							
-							// use case-insensitive comparison for track/artist/album matching
+							// trim whitespace for comparison
+							cleanedCurrentTrack = [cleanedCurrentTrack stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+							cleanedCurrentArtist = [cleanedCurrentArtist stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+							cleanedOriginalTrack = [cleanedOriginalTrack stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+							cleanedOriginalArtist = [cleanedOriginalArtist stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+							
+							// use case-insensitive comparison for track/artist matching
+							// album is optional - we only require track and artist to match
 							BOOL tracksMatch = [cleanedCurrentTrack caseInsensitiveCompare:cleanedOriginalTrack] == NSOrderedSame;
 							BOOL artistsMatch = [cleanedCurrentArtist caseInsensitiveCompare:cleanedOriginalArtist] == NSOrderedSame;
-							BOOL albumsMatch = [cleanedCurrentAlbum caseInsensitiveCompare:cleanedOriginalAlbum] == NSOrderedSame;
+							
+							NSLog(@"[Direct.FM] musicDidChange: Comparison - Original: '%@' by '%@' vs Current: '%@' by '%@'", cleanedOriginalTrack, cleanedOriginalArtist, cleanedCurrentTrack, cleanedCurrentArtist);
+							NSLog(@"[Direct.FM] musicDidChange: Match results - Track: %d, Artist: %d", tracksMatch, artistsMatch);
 								
-								if (!tracksMatch || !albumsMatch || !artistsMatch) {
-									NSLog(@"[Direct.FM] musicDidChange: track changed before scrobble, skipping. Matches - Track: %d, Artist: %d, Album: %d", tracksMatch, artistsMatch, albumsMatch);
-									return;
-								}
-								
-								NSLog(@"[Direct.FM] musicDidChange: Track still playing, proceeding with scrobble");
-								
-								// safely get timestamp
-								double timestamp = 0;
-								if (date && [date isKindOfClass:[NSDate class]]) {
-									timestamp = [date timeIntervalSince1970];
-								} else {
-									timestamp = [[NSDate date] timeIntervalSince1970];
-								}
-								
-								NSLog(@"[Direct.FM] musicDidChange: Scrobbling track now - %@ by %@", track, artist);
+							if (!tracksMatch || !artistsMatch) {
+								NSLog(@"[Direct.FM] musicDidChange: track changed before scrobble, skipping");
+								return;
+							}
+							
+							// log if album doesn't match but we're still proceeding
+							if (!albumsMatch) {
+								NSLog(@"[Direct.FM] musicDidChange: Album mismatch (original: '%@' vs current: '%@'), but proceeding with scrobble", cleanedOriginalAlbum, cleanedCurrentAlbum);
+							}
+							
+							NSLog(@"[Direct.FM] musicDidChange: Track still playing, proceeding with scrobble");
+							
+							// safely get timestamp
+							double timestamp = 0;
+							if (date && [date isKindOfClass:[NSDate class]]) {
+								timestamp = [date timeIntervalSince1970];
+							} else {
+								timestamp = [[NSDate date] timeIntervalSince1970];
+							}
+							
+							NSLog(@"[Direct.FM] musicDidChange: About to call scrobbleTrack - Track: %@, Artist: %@, Album: %@, Timestamp: %.0f", track, artist, album, timestamp);
+							NSLog(@"[Direct.FM] musicDidChange: Login status before scrobble - loggedIn: %d, token: %@", self.loggedIn, self.token ? @"exists" : @"nil");
+							
+							// call scrobble on main queue
+							dispatch_async(dispatch_get_main_queue(), ^{
 								[self scrobbleTrack:track withArtist:artist album:album atTimestamp:[NSString stringWithFormat:@"%f", timestamp]];
+							});
 							}];
 						});
 					} else {
