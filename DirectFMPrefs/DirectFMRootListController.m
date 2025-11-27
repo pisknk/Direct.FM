@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #import "DirectFMRootListController.h"
 #import "DirectFMScrobbledTracksViewController.h"
+#import "DirectFMCachedScrobblesViewController.h"
 #import "Constants.h"
 #import <spawn.h>
 #import <libroot.h>
@@ -382,6 +383,11 @@ NSString *queryString(NSDictionary *items) {
 - (void)showScrobbledTracks {
     DirectFMScrobbledTracksViewController *tracksVC = [[DirectFMScrobbledTracksViewController alloc] init];
     [self.navigationController pushViewController:tracksVC animated:YES];
+}
+
+- (void)showCachedScrobbles {
+    DirectFMCachedScrobblesViewController *cachedVC = [[DirectFMCachedScrobblesViewController alloc] init];
+    [self.navigationController pushViewController:cachedVC animated:YES];
 }
 
 - (NSString*)getLastScrobbledTrack:(PSSpecifier*)sender {

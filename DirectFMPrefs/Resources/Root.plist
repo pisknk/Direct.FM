@@ -214,13 +214,15 @@
 
 		<dict>
 			<key>cell</key>
-			<string>PSTitleValueCell</string>
+			<string>PSButtonCell</string>
 			<key>label</key>
 			<string>Cached Scrobbles</string>
 			<key>get</key>
 			<string>getCachedScrobblesCount:</string>
 			<key>id</key>
 			<string>cachedScrobblesCount</string>
+			<key>action</key>
+			<string>showCachedScrobbles</string>
 		</dict>
 
 		<dict>
