@@ -395,7 +395,7 @@ NSString *queryString(NSDictionary *items) {
 - (void)showScrobblingSettings {
     DirectFMScrobblingViewController *scrobblingVC = [[DirectFMScrobblingViewController alloc] init];
     scrobblingVC.title = @"Scrobbling";
-    scrobblingVC.rootController = self;
+    scrobblingVC.mainController = self;
     [self.navigationController pushViewController:scrobblingVC animated:YES];
 }
 

@@ -4,6 +4,6 @@
 @class DirectFMRootListController;
 
 @interface DirectFMScrobblingViewController : PSListController
-@property (nonatomic, weak) DirectFMRootListController *rootController;
+@property (nonatomic, weak) DirectFMRootListController *mainController;
 @end
 

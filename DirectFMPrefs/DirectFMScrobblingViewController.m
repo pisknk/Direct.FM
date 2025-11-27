@@ -164,9 +164,9 @@
 }
 
 - (void)showAppPicker {
-    // call root controller's showAppPicker
-    if (self.rootController && [self.rootController respondsToSelector:@selector(showAppPicker)]) {
-        [self.rootController performSelector:@selector(showAppPicker)];
+    // call main controller's showAppPicker
+    if (self.mainController && [self.mainController respondsToSelector:@selector(showAppPicker)]) {
+        [self.mainController performSelector:@selector(showAppPicker)];
     }
 }
 
