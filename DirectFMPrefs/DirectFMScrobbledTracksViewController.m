@@ -228,10 +228,20 @@
     
     _scrobbledTracks = tracks ?: @[];
     
+    // fallback to NSUserDefaults if file doesn't exist
+    if ([_scrobbledTracks count] == 0) {
+        NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
+        tracks = [defaults arrayForKey:@"scrobbleHistoryData"];
+        if (tracks && [tracks isKindOfClass:[NSArray class]] && [tracks count] > 0) {
+            _scrobbledTracks = tracks;
+            NSLog(@"[Direct.FM] Loaded %lu scrobbled tracks from NSUserDefaults", (unsigned long)[_scrobbledTracks count]);
+        }
+    }
+    
     NSLog(@"[Direct.FM] Final scrobbled tracks count: %lu", (unsigned long)[_scrobbledTracks count]);
     
     if ([_scrobbledTracks count] == 0) {
-        NSLog(@"[Direct.FM] WARNING: No scrobbled tracks found. Checked paths: %@ and old location", filePath);
+        NSLog(@"[Direct.FM] WARNING: No scrobbled tracks found. Checked paths: %@ and old location and NSUserDefaults", filePath);
     }
 }
 

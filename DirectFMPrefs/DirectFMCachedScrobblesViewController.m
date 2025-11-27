@@ -214,10 +214,20 @@
     
     _cachedScrobbles = cached ?: @[];
     
+    // fallback to NSUserDefaults if file doesn't exist
+    if ([_cachedScrobbles count] == 0) {
+        NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
+        cached = [defaults arrayForKey:@"cachedScrobblesData"];
+        if (cached && [cached isKindOfClass:[NSArray class]] && [cached count] > 0) {
+            _cachedScrobbles = cached;
+            NSLog(@"[Direct.FM] Loaded %lu cached scrobbles from NSUserDefaults", (unsigned long)[_cachedScrobbles count]);
+        }
+    }
+    
     NSLog(@"[Direct.FM] Final cached scrobbles count: %lu", (unsigned long)[_cachedScrobbles count]);
     
     if ([_cachedScrobbles count] == 0) {
-        NSLog(@"[Direct.FM] WARNING: No cached scrobbles found. Checked paths: %@ and old location", filePath);
+        NSLog(@"[Direct.FM] WARNING: No cached scrobbles found. Checked paths: %@ and old location and NSUserDefaults", filePath);
     }
 }
 

@@ -158,6 +158,12 @@ NSString *cleanString(NSString *input) {
 		NSFileManager *fileManager = [NSFileManager defaultManager];
 		NSDictionary *attributes = @{NSFilePosixPermissions: @0644};
 		[fileManager setAttributes:attributes ofItemAtPath:filePath error:nil];
+		
+		// also store in NSUserDefaults as backup for preferences bundle
+		NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:PREFS_BUNDLE_ID];
+		[defaults setObject:scrobbles forKey:@"cachedScrobblesData"];
+		[defaults synchronize];
+		NSLog(@"[Direct.FM] Also saved %lu cached scrobbles to NSUserDefaults", (unsigned long)[scrobbles count]);
 	}
 	
 	// update cache count in preferences
@@ -209,6 +215,13 @@ NSString *cleanString(NSString *input) {
 		NSFileManager *fileManager = [NSFileManager defaultManager];
 		NSDictionary *attributes = @{NSFilePosixPermissions: @0644};
 		[fileManager setAttributes:attributes ofItemAtPath:filePath error:nil];
+		
+		// also store in NSUserDefaults as backup for preferences bundle (limit to last 100 for size)
+		NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:PREFS_BUNDLE_ID];
+		NSArray *historyToStore = [history count] > 100 ? [history subarrayWithRange:NSMakeRange(0, 100)] : history;
+		[defaults setObject:historyToStore forKey:@"scrobbleHistoryData"];
+		[defaults synchronize];
+		NSLog(@"[Direct.FM] Also saved %lu scrobbles to NSUserDefaults", (unsigned long)[historyToStore count]);
 	}
 }
 
