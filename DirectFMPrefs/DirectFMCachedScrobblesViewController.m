@@ -90,14 +90,19 @@
     return self;
 }
 
+- (void)loadView {
+    // create our own view instead of using PSListController's
+    self.view = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+    if (@available(iOS 13.0, *)) {
+        self.view.backgroundColor = [UIColor systemBackgroundColor];
+    } else {
+        self.view.backgroundColor = [UIColor whiteColor];
+    }
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"Cached Scrobbles";
-    
-    // remove any existing subviews from PSListController
-    for (UIView *subview in self.view.subviews) {
-        [subview removeFromSuperview];
-    }
     
     // create table view
     _tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
@@ -115,9 +120,6 @@
     
     // register cell
     [_tableView registerClass:[DirectFMCachedScrobbleCell class] forCellReuseIdentifier:@"CachedScrobbleCell"];
-    
-    // ensure table view is on top
-    [self.view bringSubviewToFront:_tableView];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
