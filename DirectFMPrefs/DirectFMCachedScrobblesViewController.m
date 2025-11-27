@@ -138,19 +138,44 @@
 }
 
 - (void)loadCachedScrobbles {
-    // use same shared location as daemon
+    // try shared location first (new location)
     NSString *sharedPath = @"/var/mobile/Library/Preferences/";
     NSString *filePath = [sharedPath stringByAppendingPathComponent:@"DirectFMScrobbleCache.plist"];
     
+    NSArray *cached = nil;
     if ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-        NSArray *cached = [NSArray arrayWithContentsOfFile:filePath];
+        cached = [NSArray arrayWithContentsOfFile:filePath];
         if (cached && [cached isKindOfClass:[NSArray class]]) {
-            _cachedScrobbles = cached;
+            NSLog(@"[Direct.FM] Loaded %lu cached scrobbles from shared location", (unsigned long)[cached count]);
         } else {
-            _cachedScrobbles = @[];
+            cached = nil;
         }
-    } else {
-        _cachedScrobbles = @[];
+    }
+    
+    // fallback to old location if new location doesn't have data
+    if (!cached || [cached count] == 0) {
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        NSString *documentsDirectory = [paths objectAtIndex:0];
+        NSString *oldFilePath = [documentsDirectory stringByAppendingPathComponent:@"DirectFMScrobbleCache.plist"];
+        
+        if ([[NSFileManager defaultManager] fileExistsAtPath:oldFilePath]) {
+            cached = [NSArray arrayWithContentsOfFile:oldFilePath];
+            if (cached && [cached isKindOfClass:[NSArray class]]) {
+                NSLog(@"[Direct.FM] Loaded %lu cached scrobbles from old location", (unsigned long)[cached count]);
+                
+                // migrate to new location if found in old location
+                if ([cached count] > 0) {
+                    [[NSFileManager defaultManager] copyItemAtPath:oldFilePath toPath:filePath error:nil];
+                    NSLog(@"[Direct.FM] Migrated cached scrobbles to shared location");
+                }
+            }
+        }
+    }
+    
+    _cachedScrobbles = cached ?: @[];
+    
+    if ([_cachedScrobbles count] == 0) {
+        NSLog(@"[Direct.FM] No cached scrobbles found at: %@", filePath);
     }
 }
 

@@ -149,7 +149,16 @@ NSString *cleanString(NSString *input) {
 // save cached scrobbles to disk
 -(void) saveCachedScrobbles:(NSArray*)scrobbles {
 	NSString *filePath = [self cacheFilePath];
-	[scrobbles writeToFile:filePath atomically:YES];
+	BOOL success = [scrobbles writeToFile:filePath atomically:YES];
+	if (!success) {
+		NSLog(@"[Direct.FM] Failed to save cached scrobbles to: %@", filePath);
+	} else {
+		NSLog(@"[Direct.FM] Saved %lu cached scrobbles to: %@", (unsigned long)[scrobbles count], filePath);
+		// ensure file is readable by preferences bundle
+		NSFileManager *fileManager = [NSFileManager defaultManager];
+		NSDictionary *attributes = @{NSFilePosixPermissions: @0644};
+		[fileManager setAttributes:attributes ofItemAtPath:filePath error:nil];
+	}
 	
 	// update cache count in preferences
 	NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:PREFS_BUNDLE_ID];
@@ -191,7 +200,16 @@ NSString *cleanString(NSString *input) {
 	}
 	
 	NSString *filePath = [self historyFilePath];
-	[history writeToFile:filePath atomically:YES];
+	BOOL success = [history writeToFile:filePath atomically:YES];
+	if (!success) {
+		NSLog(@"[Direct.FM] Failed to save scrobble history to: %@", filePath);
+	} else {
+		NSLog(@"[Direct.FM] Saved %lu scrobbles to history: %@", (unsigned long)[history count], filePath);
+		// ensure file is readable by preferences bundle
+		NSFileManager *fileManager = [NSFileManager defaultManager];
+		NSDictionary *attributes = @{NSFilePosixPermissions: @0644};
+		[fileManager setAttributes:attributes ofItemAtPath:filePath error:nil];
+	}
 }
 
 // load scrobble history

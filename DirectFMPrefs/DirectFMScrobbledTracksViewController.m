@@ -155,14 +155,38 @@
 }
 
 - (void)loadScrobbledTracks {
-    // use same shared location as daemon
+    // try shared location first (new location)
     NSString *sharedPath = @"/var/mobile/Library/Preferences/";
     NSString *filePath = [sharedPath stringByAppendingPathComponent:@"DirectFMScrobbleHistory.plist"];
     
+    NSArray *tracks = nil;
     if ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-        _scrobbledTracks = [NSArray arrayWithContentsOfFile:filePath];
-    } else {
-        _scrobbledTracks = @[];
+        tracks = [NSArray arrayWithContentsOfFile:filePath];
+        NSLog(@"[Direct.FM] Loaded %lu scrobbled tracks from shared location", (unsigned long)[tracks count]);
+    }
+    
+    // fallback to old location if new location doesn't have data
+    if (!tracks || [tracks count] == 0) {
+        NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        NSString *documentsDirectory = [paths objectAtIndex:0];
+        NSString *oldFilePath = [documentsDirectory stringByAppendingPathComponent:@"DirectFMScrobbleHistory.plist"];
+        
+        if ([[NSFileManager defaultManager] fileExistsAtPath:oldFilePath]) {
+            tracks = [NSArray arrayWithContentsOfFile:oldFilePath];
+            NSLog(@"[Direct.FM] Loaded %lu scrobbled tracks from old location", (unsigned long)[tracks count]);
+            
+            // migrate to new location if found in old location
+            if (tracks && [tracks count] > 0) {
+                [[NSFileManager defaultManager] copyItemAtPath:oldFilePath toPath:filePath error:nil];
+                NSLog(@"[Direct.FM] Migrated scrobble history to shared location");
+            }
+        }
+    }
+    
+    _scrobbledTracks = tracks ?: @[];
+    
+    if ([_scrobbledTracks count] == 0) {
+        NSLog(@"[Direct.FM] No scrobbled tracks found at: %@", filePath);
     }
 }
 
