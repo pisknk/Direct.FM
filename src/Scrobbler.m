@@ -722,11 +722,6 @@ NSString *cleanString(NSString *input) {
 								return;
 							}
 							
-							// log if album doesn't match but we're still proceeding
-							if (!albumsMatch) {
-								NSLog(@"[Direct.FM] musicDidChange: Album mismatch (original: '%@' vs current: '%@'), but proceeding with scrobble", cleanedOriginalAlbum, cleanedCurrentAlbum);
-							}
-							
 							NSLog(@"[Direct.FM] musicDidChange: Track still playing, proceeding with scrobble");
 							
 							// safely get timestamp
