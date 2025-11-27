@@ -16,6 +16,7 @@
 			<key>defaults</key>
 			<string>playpass.direct.fmprefs</string>
 		</dict>
+		
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
@@ -32,7 +33,7 @@
 			<key>label</key>
 			<string>Username:</string>
 			<key>PostNotification</key>
-	        <string>playpass.direct.fmprefs-updated</string>
+			<string>playpass.direct.fmprefs-updated</string>
 			<key>id</key>
 			<string>username</string>	
 		</dict>
@@ -46,223 +47,45 @@
 			<key>label</key>
 			<string>Password:</string>
 			<key>PostNotification</key>
-	        <string>playpass.direct.fmprefs-updated</string>
+			<string>playpass.direct.fmprefs-updated</string>
 			<key>id</key>
 			<string>password</string>	
 		</dict>
-
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 		</dict>
-
 		<dict>
-            <key>cell</key>
-            <string>PSButtonCell</string>
-            <key>label</key>
-            <string>Login</string>
-            <key>action</key>
-            <string>login</string>
-        </dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Login</string>
+			<key>action</key>
+			<string>login</string>
+		</dict>
 
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Settings</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSLinkCell</string>
 			<key>label</key>
 			<string>Scrobbling</string>
-			<key>footerText</key>
-			<string>Delay in percentage after which the track is scrobbled to last.fm</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSTitleValueCell</string>
-			<key>label</key>
-			<string>Selected Apps</string>
-			<key>get</key>
-			<string>getSelectedAppsDisplay:</string>
-			<key>id</key>
-			<string>selectedAppsDisplay</string>
 			<key>action</key>
-			<string>showSelectedAppsPopup</string>
+			<string>showScrobblingSettings</string>
 		</dict>
-		
 		<dict>
 			<key>cell</key>
-			<string>PSButtonCell</string>
-			<key>label</key>
-			<string>Choose Apps to Scrobble</string>
-			<key>action</key>
-			<string>showAppPicker</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSSliderCell</string>
-			<key>key</key>
-			<string>scrobbleAfter</string>
-			<key>defaults</key>
-			<string>playpass.direct.fmprefs</string>
-			<key>default</key>
-			<real>0.7</real>
-			<key>min</key>
-			<integer>0</integer>
-			<key>max</key>
-			<integer>1</integer>
-			<key>showValue</key>
-			<true/>
-			<key>PostNotification</key>
-	        <string>playpass.direct.fmprefs-updated</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>footerText</key>
-			<string>Automatically remove common tags like "• Video Available", "[Explicit]", "Single", years, "Remaster", etc. from artist and track names before scrobbling</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSSwitchCell</string>
-			<key>default</key>
-			<true/>
-			<key>label</key>
-			<string>Remove Extra Tags</string>
-			<key>key</key>
-			<string>removeExtraTags</string>
-			<key>defaults</key>
-			<string>playpass.direct.fmprefs</string>
-			<key>PostNotification</key>
-	        <string>playpass.direct.fmprefs-updated</string>
-			<key>id</key>
-			<string>removeExtraTags</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
+			<string>PSLinkCell</string>
 			<key>label</key>
 			<string>Status</string>
-			<key>footerText</key>
-			<string>Current scrobbling status and debug information</string>
-		</dict>
-
-        <dict>
-            <key>cell</key>
-            <string>PSTitleValueCell</string>
-            <key>label</key>
-            <string>Daemon Status</string>
-            <key>get</key>
-            <string>daemonStatus:</string>
-			<key>id</key>
-			<string>daemonStatus</string>			
-        </dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSButtonCell</string>
-			<key>label</key>
-			<string>Total Scrobbles</string>
-			<key>get</key>
-			<string>getScrobbleCount:</string>
-			<key>id</key>
-			<string>scrobbleCount</string>
 			<key>action</key>
-			<string>showScrobbledTracks</string>
+			<string>showStatus</string>
 		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSTitleValueCell</string>
-			<key>label</key>
-			<string>Last Scrobbled</string>
-			<key>get</key>
-			<string>getLastScrobbledTrack:</string>
-			<key>id</key>
-			<string>lastScrobbledTrack</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSTitleValueCell</string>
-			<key>label</key>
-			<string>Current App</string>
-			<key>get</key>
-			<string>getCurrentPlayingApp:</string>
-			<key>id</key>
-			<string>currentPlayingApp</string>
-		</dict>
-
-		<dict>
-            <key>cell</key>
-            <string>PSButtonCell</string>
-            <key>label</key>
-            <string>Check Full Scrobble Status</string>
-            <key>action</key>
-            <string>checkScrobbleStatus</string>
-        </dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>Scrobble Cache</string>
-			<key>footerText</key>
-			<string>Scrobbles are automatically cached when internet is unavailable. Use the retry button to submit cached scrobbles when you have internet access.</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSButtonCell</string>
-			<key>label</key>
-			<string>Cached Scrobbles</string>
-			<key>get</key>
-			<string>getCachedScrobblesCount:</string>
-			<key>id</key>
-			<string>cachedScrobblesCount</string>
-			<key>action</key>
-			<string>showCachedScrobbles</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSButtonCell</string>
-			<key>label</key>
-			<string>Retry Cached Scrobbles</string>
-			<key>action</key>
-			<string>retryCachedScrobbles</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSTitleValueCell</string>
-			<key>label</key>
-			<string>Last Retry Status</string>
-			<key>get</key>
-			<string>getLastCacheRetryStatus:</string>
-			<key>id</key>
-			<string>lastCacheRetryStatus</string>
-		</dict>
-
-		<dict>
-			<key>cell</key>
-			<string>PSButtonCell</string>
-			<key>label</key>
-			<string>Reset Debug Counter</string>
-			<key>action</key>
-			<string>resetScrobbleCount</string>
-		</dict>
-		<dict>
-            <key>cell</key>
-            <string>PSButtonCell</string>
-            <key>action</key>
-            <string>toggleDaemon</string>
-			<key>id</key>
-			<string>daemonToggle</string>
-			<key>label</key>
-            <string>Loading...</string>
-        </dict>
 
 		<dict>
 			<key>cell</key>
@@ -270,7 +93,6 @@
 			<key>label</key>
 			<string>Links</string>
 		</dict>
-
 		<dict>
 			<key>cell</key>
 			<string>PSButtonCell</string>
@@ -281,7 +103,6 @@
 			<key>action</key>
 			<string>open:</string>
 		</dict>
-
 		<dict>
 			<key>cell</key>
 			<string>PSButtonCell</string>

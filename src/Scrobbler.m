@@ -237,52 +237,8 @@ NSString *cleanString(NSString *input) {
 	return [[NSArray alloc] init];
 }
 
-// unscrobble a track from last.fm
--(void) unscrobbleTrack:(NSString*)track artist:(NSString*)artist timestamp:(NSString*)timestamp completionHandler:(void(^)(BOOL success, NSError *error))completionHandler {
-	NSMutableDictionary *dict = [@{
-		@"track": track,
-		@"artist": artist,
-		@"timestamp": timestamp,
-		@"method": @"track.unscrobble"
-	} mutableCopy];
-	
-	[self requestLastfm:dict completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error) {
-		BOOL success = NO;
-		if (!error && response && response.statusCode == 200) {
-			success = YES;
-			NSLog(@"[Direct.FM] Unscrobbled track: %@ - %@", artist, track);
-			
-			// remove from history
-			NSMutableArray *history = [[self loadScrobbleHistory] mutableCopy];
-			NSMutableArray *toRemove = [[NSMutableArray alloc] init];
-			for (NSDictionary *entry in history) {
-				if ([[entry objectForKey:@"track"] isEqualToString:track] && 
-					[[entry objectForKey:@"artist"] isEqualToString:artist] &&
-					[[entry objectForKey:@"timestamp"] isEqualToString:timestamp]) {
-					[toRemove addObject:entry];
-				}
-			}
-			[history removeObjectsInArray:toRemove];
-			
-			NSString *filePath = [self historyFilePath];
-			[history writeToFile:filePath atomically:YES];
-			
-			// update count
-			NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:PREFS_BUNDLE_ID];
-			NSInteger currentCount = [defaults integerForKey:@"scrobbleCount"];
-			if (currentCount > 0) {
-				[defaults setInteger:currentCount - [toRemove count] forKey:@"scrobbleCount"];
-				[defaults synchronize];
-			}
-		} else {
-			NSLog(@"[Direct.FM] Failed to unscrobble track: %@ - %@, Error: %@", artist, track, error);
-		}
-		
-		if (completionHandler) {
-			completionHandler(success, error);
-		}
-	}];
-}
+// note: Last.fm API doesn't support unscrobbling (track.unscrobble method was removed)
+// users can only remove tracks from local history, not from Last.fm
 
 // check if network is available
 -(BOOL) isNetworkAvailable {

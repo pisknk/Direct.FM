@@ -86,26 +86,7 @@ void retryCachedScrobbles(CFNotificationCenterRef center, void *observer, CFStri
 	}
 }
 
-void unscrobbleTrack(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
-	if (scrobbler && userInfo) {
-		NSDictionary *info = (__bridge NSDictionary*)userInfo;
-		NSString *track = [info objectForKey:@"track"];
-		NSString *artist = [info objectForKey:@"artist"];
-		NSString *timestamp = [info objectForKey:@"timestamp"];
-		
-		if (track && artist && timestamp) {
-			[scrobbler unscrobbleTrack:track artist:artist timestamp:timestamp completionHandler:^(BOOL success, NSError *error) {
-				if (success) {
-					NSLog(@"[Direct.FM] Successfully unscrobbled track");
-				} else {
-					NSLog(@"[Direct.FM] Failed to unscrobble track: %@", error);
-				}
-			}];
-		}
-	} else {
-		NSLog(@"[Direct.FM] Cannot unscrobble: scrobbler not initialized or missing info");
-	}
-}
+// note: Last.fm API doesn't support unscrobbling, so this functionality was removed
 
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
@@ -113,7 +94,6 @@ int main(int argc, char *argv[], char *envp[]) {
 
 		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)updatePrefs, CFSTR("playpass.direct.fmprefs-updated"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
 		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)retryCachedScrobbles, CFSTR("playpass.direct.fm-retry-cache"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
-		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)unscrobbleTrack, CFSTR("playpass.direct.fm-unscrobble"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
 		updatePrefs();
 		CFRunLoopRun();
 		return 0;

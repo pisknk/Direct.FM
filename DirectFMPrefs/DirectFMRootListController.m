@@ -7,6 +7,8 @@
 #import "DirectFMRootListController.h"
 #import "DirectFMScrobbledTracksViewController.h"
 #import "DirectFMCachedScrobblesViewController.h"
+#import "DirectFMScrobblingViewController.h"
+#import "DirectFMStatusViewController.h"
 #import "Constants.h"
 #import <spawn.h>
 #import <libroot.h>
@@ -388,6 +390,19 @@ NSString *queryString(NSDictionary *items) {
 - (void)showCachedScrobbles {
     DirectFMCachedScrobblesViewController *cachedVC = [[DirectFMCachedScrobblesViewController alloc] init];
     [self.navigationController pushViewController:cachedVC animated:YES];
+}
+
+- (void)showScrobblingSettings {
+    DirectFMScrobblingViewController *scrobblingVC = [[DirectFMScrobblingViewController alloc] init];
+    scrobblingVC.title = @"Scrobbling";
+    scrobblingVC.rootController = self;
+    [self.navigationController pushViewController:scrobblingVC animated:YES];
+}
+
+- (void)showStatus {
+    DirectFMStatusViewController *statusVC = [[DirectFMStatusViewController alloc] init];
+    statusVC.title = @"Status";
+    [self.navigationController pushViewController:statusVC animated:YES];
 }
 
 - (NSString*)getLastScrobbledTrack:(PSSpecifier*)sender {

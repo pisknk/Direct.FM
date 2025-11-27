@@ -355,41 +355,41 @@
 - (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
     if (editingStyle == UITableViewCellEditingStyleDelete) {
         NSDictionary *track = _scrobbledTracks[indexPath.row];
-        [self unscrobbleTrack:track];
+        NSString *trackName = track[@"track"] ?: @"Unknown";
+        NSString *artist = track[@"artist"] ?: @"Unknown";
         
         // remove from array
         NSMutableArray *mutableTracks = [_scrobbledTracks mutableCopy];
         [mutableTracks removeObjectAtIndex:indexPath.row];
         _scrobbledTracks = [mutableTracks copy];
         
+        // save updated history to disk
+        NSString *sharedPath = @"/var/mobile/Library/Preferences/";
+        NSString *filePath = [sharedPath stringByAppendingPathComponent:@"DirectFMScrobbleHistory.plist"];
+        [_scrobbledTracks writeToFile:filePath atomically:YES];
+        
+        // also update NSUserDefaults
+        NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
+        NSArray *historyToStore = [_scrobbledTracks count] > 100 ? [_scrobbledTracks subarrayWithRange:NSMakeRange(0, 100)] : _scrobbledTracks;
+        [defaults setObject:historyToStore forKey:@"scrobbleHistoryData"];
+        
+        // update scrobble count
+        NSInteger currentCount = [defaults integerForKey:@"scrobbleCount"];
+        if (currentCount > 0) {
+            [defaults setInteger:currentCount - 1 forKey:@"scrobbleCount"];
+        }
+        [defaults synchronize];
+        
         // update table view
         [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
-    }
-}
-
-- (void)unscrobbleTrack:(NSDictionary*)track {
-    NSString *trackName = track[@"track"];
-    NSString *artist = track[@"artist"];
-    NSString *timestamp = track[@"timestamp"];
-    
-    // send notification to daemon to unscrobble
-    NSDictionary *userInfo = @{
-        @"track": trackName ?: @"",
-        @"artist": artist ?: @"",
-        @"timestamp": timestamp ?: @""
-    };
-    
-    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("playpass.direct.fm-unscrobble"), (__bridge CFDictionaryRef)userInfo, NULL, YES);
-    
-    // show alert
-    if ([UIAlertController class]) {
-        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Unscrobbled" message:[NSString stringWithFormat:@"Removed \"%@\" by %@ from your scrobbles", trackName, artist] preferredStyle:UIAlertControllerStyleAlert];
-        UIAlertAction *ok = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
-        [alert addAction:ok];
-        [self presentViewController:alert animated:YES completion:nil];
-    } else {
-        UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Unscrobbled" message:[NSString stringWithFormat:@"Removed \"%@\" by %@ from your scrobbles", trackName, artist] delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
-        [alert show];
+        
+        // show alert - note: Last.fm API doesn't support unscrobbling, so this only removes from local history
+        if ([UIAlertController class]) {
+            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Removed from History" message:[NSString stringWithFormat:@"Removed \"%@\" by %@ from local history.\n\nNote: This does not remove the scrobble from Last.fm (API limitation).", trackName, artist] preferredStyle:UIAlertControllerStyleAlert];
+            UIAlertAction *ok = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
+            [alert addAction:ok];
+            [self presentViewController:alert animated:YES completion:nil];
+        }
     }
 }
 

@@ -23,5 +23,4 @@
 -(NSInteger) getCachedScrobblesCount;
 -(void) saveScrobbleToHistory:(NSString*)track artist:(NSString*)artist album:(NSString*)album timestamp:(NSString*)timestamp;
 -(NSArray*) loadScrobbleHistory;
--(void) unscrobbleTrack:(NSString*)track artist:(NSString*)artist timestamp:(NSString*)timestamp completionHandler:(void(^)(BOOL success, NSError *error))completionHandler;
 @end
