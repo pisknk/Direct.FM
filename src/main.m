@@ -78,11 +78,20 @@ void updatePrefs() {
 
 
 
+void retryCachedScrobbles(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+	if (scrobbler) {
+		[scrobbler retryCachedScrobbles];
+	} else {
+		NSLog(@"[Direct.FM] Cannot retry cached scrobbles: scrobbler not initialized");
+	}
+}
+
 int main(int argc, char *argv[], char *envp[]) {
 	@autoreleasepool {
 		NSLog(@"[Direct.FM] Direct.FM started!");
 
 		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)updatePrefs, CFSTR("playpass.direct.fmprefs-updated"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
+		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, (CFNotificationCallback)retryCachedScrobbles, CFSTR("playpass.direct.fm-retry-cache"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
 		updatePrefs();
 		CFRunLoopRun();
 		return 0;

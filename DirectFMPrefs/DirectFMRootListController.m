@@ -390,6 +390,68 @@ NSString *queryString(NSDictionary *items) {
     return currentApp ?: @"None detected";
 }
 
+- (NSString*)getCachedScrobblesCount:(PSSpecifier*)sender {
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
+    NSInteger count = [defaults integerForKey:@"cachedScrobblesCount"];
+    return [NSString stringWithFormat:@"%ld", (long)count];
+}
+
+- (NSString*)getLastCacheRetryStatus:(PSSpecifier*)sender {
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
+    NSString *status = [defaults stringForKey:@"lastCacheRetryStatus"];
+    return status ?: @"Never retried";
+}
+
+- (void)retryCachedScrobbles {
+    NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
+    NSInteger cachedCount = [defaults integerForKey:@"cachedScrobblesCount"];
+    
+    if (cachedCount == 0) {
+        [self showAlertWithTitle:@"No Cached Scrobbles" message:@"There are no cached scrobbles to retry." buttonTitle:@"OK"];
+        return;
+    }
+    
+    // show confirmation alert
+    NSString *message = [NSString stringWithFormat:@"Retry %ld cached scrobble%@? This will attempt to submit them to last.fm.", (long)cachedCount, cachedCount == 1 ? @"" : @"s"];
+    
+    if ([UIAlertController class]) {
+        // ios 9+ code
+        UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Retry Cached Scrobbles" 
+                                                                       message:message 
+                                                                preferredStyle:UIAlertControllerStyleAlert];
+        
+        UIAlertAction *cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+        UIAlertAction *retryAction = [UIAlertAction actionWithTitle:@"Retry" 
+                                                             style:UIAlertActionStyleDefault 
+                                                           handler:^(UIAlertAction * _Nonnull action) {
+            // send notification to daemon to retry
+            CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("playpass.direct.fm-retry-cache"), NULL, NULL, YES);
+            
+            // show loading message
+            [self showAlertWithTitle:@"Retrying..." message:@"Submitting cached scrobbles. This may take a moment." buttonTitle:@"OK"];
+            
+            // refresh cache count after a delay
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                [self reloadSpecifier:[self specifierForID:@"cachedScrobblesCount"]];
+                [self reloadSpecifier:[self specifierForID:@"lastCacheRetryStatus"]];
+            });
+        }];
+        
+        [alert addAction:cancelAction];
+        [alert addAction:retryAction];
+        [self presentViewController:alert animated:YES completion:nil];
+    } else {
+        // ios 8 fallback
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:@"Retry Cached Scrobbles" 
+                                                            message:message 
+                                                           delegate:self 
+                                                  cancelButtonTitle:@"Cancel" 
+                                                  otherButtonTitles:@"Retry", nil];
+        alertView.tag = 100; // tag to identify this alert
+        [alertView show];
+    }
+}
+
 - (void)resetScrobbleCount {
     NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
     [defaults setInteger:0 forKey:@"scrobbleCount"];
@@ -664,6 +726,23 @@ NSString *queryString(NSDictionary *items) {
     }
     
     [self.navigationController popViewControllerAnimated:YES];
+}
+
+// UIAlertViewDelegate for iOS 8 compatibility
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (alertView.tag == 100 && buttonIndex == 1) {
+        // retry button pressed
+        CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("playpass.direct.fm-retry-cache"), NULL, NULL, YES);
+        
+        // show loading message
+        [self showAlertWithTitle:@"Retrying..." message:@"Submitting cached scrobbles. This may take a moment." buttonTitle:@"OK"];
+        
+        // refresh cache count after a delay
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            [self reloadSpecifier:[self specifierForID:@"cachedScrobblesCount"]];
+            [self reloadSpecifier:[self specifierForID:@"lastCacheRetryStatus"]];
+        });
+    }
 }
 
 - (NSArray *)getInstalledUserApps {

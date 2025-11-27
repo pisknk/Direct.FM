@@ -17,4 +17,7 @@
 -(void) registerObserver;
 -(void) musicDidChange:(NSNotification*)notification;
 -(void)loadToken;
+-(void) cacheScrobble:(NSDictionary*)scrobbleData;
+-(void) retryCachedScrobbles;
+-(NSInteger) getCachedScrobblesCount;
 @end

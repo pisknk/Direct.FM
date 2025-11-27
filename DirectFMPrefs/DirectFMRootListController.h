@@ -1,7 +1,7 @@
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
 
-@interface DirectFMRootListController : PSListController
+@interface DirectFMRootListController : PSListController <UIAlertViewDelegate>
 @property (atomic) bool daemonRunning;
 @property (strong, nonatomic) NSMutableArray *selectedAppBundleIDs;
 - (void)showAppPicker;

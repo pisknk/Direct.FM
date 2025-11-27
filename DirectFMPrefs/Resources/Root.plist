@@ -203,6 +203,46 @@
 
 		<dict>
 			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Scrobble Cache</string>
+			<key>footerText</key>
+			<string>Scrobbles are automatically cached when internet is unavailable. Use the retry button to submit cached scrobbles when you have internet access.</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSTitleValueCell</string>
+			<key>label</key>
+			<string>Cached Scrobbles</string>
+			<key>get</key>
+			<string>getCachedScrobblesCount:</string>
+			<key>id</key>
+			<string>cachedScrobblesCount</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSButtonCell</string>
+			<key>label</key>
+			<string>Retry Cached Scrobbles</string>
+			<key>action</key>
+			<string>retryCachedScrobbles</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
+			<string>PSTitleValueCell</string>
+			<key>label</key>
+			<string>Last Retry Status</string>
+			<key>get</key>
+			<string>getLastCacheRetryStatus:</string>
+			<key>id</key>
+			<string>lastCacheRetryStatus</string>
+		</dict>
+
+		<dict>
+			<key>cell</key>
 			<string>PSButtonCell</string>
 			<key>label</key>
 			<string>Reset Debug Counter</string>
