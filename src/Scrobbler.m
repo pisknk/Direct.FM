@@ -179,17 +179,22 @@ NSString *cleanString(NSString *input) {
 	
 	NSMutableArray *failedScrobbles = [[NSMutableArray alloc] init];
 	__block NSInteger successCount = 0;
-	__block NSInteger processedCount = 0;
 	NSInteger totalCount = [cached count];
 	
 	// process scrobbles sequentially to avoid rate limiting
 	dispatch_queue_t retryQueue = dispatch_queue_create("com.directfm.retry", DISPATCH_QUEUE_SERIAL);
 	
 	// use a recursive function to process them one at a time
-	__block void (^processNext)(NSInteger index) = ^(NSInteger index) {
+	// use __weak to avoid retain cycle
+	__weak typeof(self) weakSelf = self;
+	__block void (^processNext)(NSInteger index);
+	processNext = ^(NSInteger index) {
+		typeof(self) strongSelf = weakSelf;
+		if (!strongSelf) return;
+		
 		if (index >= totalCount) {
 			// all done - save results
-			[self saveCachedScrobbles:failedScrobbles];
+			[strongSelf saveCachedScrobbles:failedScrobbles];
 			
 			// update status
 			NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:PREFS_BUNDLE_ID];
@@ -204,7 +209,7 @@ NSString *cleanString(NSString *input) {
 		NSDictionary *scrobbleData = cached[index];
 		NSMutableDictionary *params = [scrobbleData mutableCopy];
 		
-		[self requestLastfm:params completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error) {
+		[strongSelf requestLastfm:params completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error) {
 			dispatch_async(retryQueue, ^{
 				if (error || !response || response.statusCode != 200) {
 					[failedScrobbles addObject:scrobbleData];
@@ -213,8 +218,6 @@ NSString *cleanString(NSString *input) {
 					successCount++;
 					NSLog(@"[Direct.FM] Successfully retried cached scrobble: %@ - %@", scrobbleData[@"artist[0]"], scrobbleData[@"track[0]"]);
 				}
-				
-				processedCount++;
 				
 				// small delay between requests to avoid rate limiting
 				dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.5 * NSEC_PER_SEC), retryQueue, ^{

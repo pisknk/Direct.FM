@@ -628,6 +628,23 @@ NSString *queryString(NSDictionary *items) {
     }
 }
 
+// UIAlertViewDelegate for iOS 8 compatibility
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (alertView.tag == 100 && buttonIndex == 1) {
+        // retry button pressed
+        CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("playpass.direct.fm-retry-cache"), NULL, NULL, YES);
+        
+        // show loading message
+        [self showAlertWithTitle:@"Retrying..." message:@"Submitting cached scrobbles. This may take a moment." buttonTitle:@"OK"];
+        
+        // refresh cache count after a delay
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            [self reloadSpecifier:[self specifierForID:@"cachedScrobblesCount"]];
+            [self reloadSpecifier:[self specifierForID:@"lastCacheRetryStatus"]];
+        });
+    }
+}
+
 @end
 
 // implementation of app picker - fallback implementation that works without AltList headers
@@ -726,23 +743,6 @@ NSString *queryString(NSDictionary *items) {
     }
     
     [self.navigationController popViewControllerAnimated:YES];
-}
-
-// UIAlertViewDelegate for iOS 8 compatibility
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-    if (alertView.tag == 100 && buttonIndex == 1) {
-        // retry button pressed
-        CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("playpass.direct.fm-retry-cache"), NULL, NULL, YES);
-        
-        // show loading message
-        [self showAlertWithTitle:@"Retrying..." message:@"Submitting cached scrobbles. This may take a moment." buttonTitle:@"OK"];
-        
-        // refresh cache count after a delay
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            [self reloadSpecifier:[self specifierForID:@"cachedScrobblesCount"]];
-            [self reloadSpecifier:[self specifierForID:@"lastCacheRetryStatus"]];
-        });
-    }
 }
 
 - (NSArray *)getInstalledUserApps {
