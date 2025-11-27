@@ -404,6 +404,20 @@ NSString *cleanString(NSString *input) {
 } 
 
 -(void) scrobbleTrack:(NSString*)music withArtist:(NSString*)artist album:(NSString*)album atTimestamp:(NSString*)timestamp {
+	// check if logged in
+	if (!self.loggedIn || !self.token) {
+		NSLog(@"[Direct.FM] scrobbleTrack: Not logged in (loggedIn: %d, token: %@), caching scrobble", self.loggedIn, self.token ? @"exists" : @"nil");
+		NSMutableDictionary *dict = [@{
+			@"track[0]": music ?: @"",
+			@"artist[0]": artist ?: @"",
+			@"album[0]": album ?: @"",
+			@"timestamp[0]": timestamp ?: @"",
+			@"method": @"track.scrobble"
+		} mutableCopy];
+		[self cacheScrobble:dict];
+		return;
+	}
+	
 	// check if tag cleaning is enabled
 	NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
 	BOOL removeTags = [defaults objectForKey:@"removeExtraTags"] ? [[defaults objectForKey:@"removeExtraTags"] boolValue] : YES;
@@ -418,6 +432,8 @@ NSString *cleanString(NSString *input) {
 		NSLog(@"[Direct.FM] Cleaned tags before scrobbling - Track: \"%@\" -> \"%@\", Artist: \"%@\" -> \"%@\", Album: \"%@\" -> \"%@\"", music, cleanedTrack, artist, cleanedArtist, album, cleanedAlbum);
 	}
 	
+	NSLog(@"[Direct.FM] scrobbleTrack: Attempting to scrobble - Track: %@, Artist: %@, Album: %@, Timestamp: %@", cleanedTrack, cleanedArtist, cleanedAlbum, timestamp);
+	
 	NSMutableDictionary *dict = [@{
 		@"track[0]": cleanedTrack,
 		@"artist[0]": cleanedArtist,
@@ -427,12 +443,22 @@ NSString *cleanString(NSString *input) {
 	} mutableCopy];
 
 	[self requestLastfm:dict completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error) {
-		if (error || !response || response.statusCode != 200) {
-			// network error or non-200 status - cache the scrobble
-			NSLog(@"[Direct.FM] Failed to scrobble track %@, caching for retry. Error: %@, Status: %ld", cleanedTrack, error, (long)response.statusCode);
+		if (error) {
+			// network error - cache the scrobble
+			NSLog(@"[Direct.FM] Failed to scrobble track %@ due to network error, caching for retry. Error: %@", cleanedTrack, error);
+			[self cacheScrobble:dict];
+		} else if (!response) {
+			// no response - cache the scrobble
+			NSLog(@"[Direct.FM] Failed to scrobble track %@ - no response received, caching for retry", cleanedTrack);
+			[self cacheScrobble:dict];
+		} else if (response.statusCode != 200) {
+			// non-200 status - log and cache
+			NSString *responseData = data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"No data";
+			NSLog(@"[Direct.FM] Failed to scrobble track %@ - HTTP status: %ld, Response: %@", cleanedTrack, (long)response.statusCode, responseData);
 			[self cacheScrobble:dict];
 		} else {
-			NSLog(@"[Direct.FM] Scrobbled track %@", cleanedTrack);
+			// success!
+			NSLog(@"[Direct.FM] Successfully scrobbled track %@ by %@", cleanedTrack, cleanedArtist);
 			
 			// save to history
 			[self saveScrobbleToHistory:cleanedTrack artist:cleanedArtist album:cleanedAlbum timestamp:timestamp];
@@ -610,6 +636,12 @@ NSString *cleanString(NSString *input) {
 		}
 		
 		NSLog(@"[Direct.FM] App %@ (%@) is in selected apps, proceeding with scrobble", appName, appBID);
+		
+		// check if logged in
+		if (!self.loggedIn || !self.token) {
+			NSLog(@"[Direct.FM] musicDidChange: Not logged in (loggedIn: %d, token: %@), cannot scrobble", self.loggedIn, self.token ? @"exists" : @"nil");
+			return;
+		}
 
 		[self getCurrentlyPlayingMusicWithcompletionHandler:^(NSString *track, NSString *artist, NSString *album, NSDate *date, NSNumber *duration){
 			if (!track || !artist || !album) {
@@ -617,39 +649,98 @@ NSString *cleanString(NSString *input) {
 				return;
 			}
 			
+			NSLog(@"[Direct.FM] musicDidChange: Got track info - Track: %@, Artist: %@, Album: %@, Duration: %@", track, artist, album, duration);
+			
 			[self updateNowPlaying:track withArtist:artist album:album];
 
 			// only schedule scrobble if we have valid duration
-			if (duration && [duration isKindOfClass:[NSNumber class]] && [duration doubleValue] > 0) {
-				double delaySeconds = [duration doubleValue] * self.scrobbleAfter;
-				if (delaySeconds > 0 && delaySeconds < 3600) { // sanity check: max 1 hour
-					dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delaySeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-						[self getCurrentlyPlayingMusicWithcompletionHandler:^(NSString *currentTrack, NSString *currentArtist, NSString *currentAlbum, NSDate *currentDate, NSNumber *currentDuration){
-							if (!currentTrack || !currentArtist || !currentAlbum) {
-								NSLog(@"[Direct.FM] musicDidChange: missing current track info for scrobble check");
-								return;
-							}
-							if (![currentTrack isEqualToString:track] || ![currentAlbum isEqualToString:album] || ![currentArtist isEqualToString:artist]) {
-								NSLog(@"[Direct.FM] musicDidChange: track changed before scrobble, skipping");
-								return;
-							}
+			if (duration && [duration isKindOfClass:[NSNumber class]]) {
+				double durationValue = [duration doubleValue];
+				NSLog(@"[Direct.FM] musicDidChange: Duration value: %f, scrobbleAfter: %f", durationValue, self.scrobbleAfter);
+				
+				if (durationValue > 0) {
+					double delaySeconds = durationValue * self.scrobbleAfter;
+					NSLog(@"[Direct.FM] musicDidChange: Scheduling scrobble in %.1f seconds (%.1f%% of %.1f seconds)", delaySeconds, self.scrobbleAfter * 100, durationValue);
+					
+					if (delaySeconds > 0 && delaySeconds < 3600) { // sanity check: max 1 hour
+						dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delaySeconds * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+							NSLog(@"[Direct.FM] musicDidChange: Delay completed, checking if track is still playing...");
+							[self getCurrentlyPlayingMusicWithcompletionHandler:^(NSString *currentTrack, NSString *currentArtist, NSString *currentAlbum, NSDate *currentDate, NSNumber *currentDuration){
+								if (!currentTrack || !currentArtist || !currentAlbum) {
+									NSLog(@"[Direct.FM] musicDidChange: missing current track info for scrobble check");
+									return;
+								}
+								
+							NSLog(@"[Direct.FM] musicDidChange: Current track - Track: %@, Artist: %@, Album: %@", currentTrack, currentArtist, currentAlbum);
+							NSLog(@"[Direct.FM] musicDidChange: Original track - Track: %@, Artist: %@, Album: %@", track, artist, album);
 							
-							// safely get timestamp
-							double timestamp = 0;
-							if (date && [date isKindOfClass:[NSDate class]]) {
-								timestamp = [date timeIntervalSince1970];
-							} else {
-								timestamp = [[NSDate date] timeIntervalSince1970];
-							}
+							// clean both tracks for comparison (in case cleaning settings changed)
+							NSUserDefaults *defaults = [[NSUserDefaults alloc] initWithSuiteName:@"playpass.direct.fmprefs"];
+							BOOL removeTags = [defaults objectForKey:@"removeExtraTags"] ? [[defaults objectForKey:@"removeExtraTags"] boolValue] : YES;
 							
-							[self scrobbleTrack:track withArtist:artist album:album atTimestamp:[NSString stringWithFormat:@"%f", timestamp]];
-						}];
-					});
+							NSString *cleanedCurrentTrack = removeTags ? cleanString(currentTrack) : currentTrack;
+							NSString *cleanedCurrentArtist = removeTags ? cleanString(currentArtist) : currentArtist;
+							NSString *cleanedCurrentAlbum = removeTags ? cleanString(currentAlbum) : currentAlbum;
+							
+							NSString *cleanedOriginalTrack = removeTags ? cleanString(track) : track;
+							NSString *cleanedOriginalArtist = removeTags ? cleanString(artist) : artist;
+							NSString *cleanedOriginalAlbum = removeTags ? cleanString(album) : album;
+							
+							// use case-insensitive comparison for track/artist/album matching
+							BOOL tracksMatch = [cleanedCurrentTrack caseInsensitiveCompare:cleanedOriginalTrack] == NSOrderedSame;
+							BOOL artistsMatch = [cleanedCurrentArtist caseInsensitiveCompare:cleanedOriginalArtist] == NSOrderedSame;
+							BOOL albumsMatch = [cleanedCurrentAlbum caseInsensitiveCompare:cleanedOriginalAlbum] == NSOrderedSame;
+								
+								if (!tracksMatch || !albumsMatch || !artistsMatch) {
+									NSLog(@"[Direct.FM] musicDidChange: track changed before scrobble, skipping. Matches - Track: %d, Artist: %d, Album: %d", tracksMatch, artistsMatch, albumsMatch);
+									return;
+								}
+								
+								NSLog(@"[Direct.FM] musicDidChange: Track still playing, proceeding with scrobble");
+								
+								// safely get timestamp
+								double timestamp = 0;
+								if (date && [date isKindOfClass:[NSDate class]]) {
+									timestamp = [date timeIntervalSince1970];
+								} else {
+									timestamp = [[NSDate date] timeIntervalSince1970];
+								}
+								
+								NSLog(@"[Direct.FM] musicDidChange: Scrobbling track now - %@ by %@", track, artist);
+								[self scrobbleTrack:track withArtist:artist album:album atTimestamp:[NSString stringWithFormat:@"%f", timestamp]];
+							}];
+						});
+					} else {
+						NSLog(@"[Direct.FM] musicDidChange: delaySeconds out of range: %.1f (must be 0-3600)", delaySeconds);
+					}
 				} else {
-					NSLog(@"[Direct.FM] musicDidChange: invalid duration value: %@", duration);
+					NSLog(@"[Direct.FM] musicDidChange: duration is 0 or negative: %f", durationValue);
+					// if duration is 0 or invalid, scrobble immediately after a short delay
+					NSLog(@"[Direct.FM] musicDidChange: No duration available, scrobbling immediately after 5 seconds");
+					dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+						double timestamp = 0;
+						if (date && [date isKindOfClass:[NSDate class]]) {
+							timestamp = [date timeIntervalSince1970];
+						} else {
+							timestamp = [[NSDate date] timeIntervalSince1970];
+						}
+						NSLog(@"[Direct.FM] musicDidChange: Scrobbling track immediately (no duration) - %@ by %@", track, artist);
+						[self scrobbleTrack:track withArtist:artist album:album atTimestamp:[NSString stringWithFormat:@"%f", timestamp]];
+					});
 				}
 			} else {
-				NSLog(@"[Direct.FM] musicDidChange: no valid duration, skipping scrobble scheduling");
+				NSLog(@"[Direct.FM] musicDidChange: no valid duration object, scrobbling immediately after 5 seconds");
+				// if no duration, scrobble after a short delay
+				dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+					double timestamp = 0;
+					if (date && [date isKindOfClass:[NSDate class]]) {
+						timestamp = [date timeIntervalSince1970];
+					} else {
+						timestamp = [[NSDate date] timeIntervalSince1970];
+					}
+					NSLog(@"[Direct.FM] musicDidChange: Scrobbling track immediately (no duration object) - %@ by %@", track, artist);
+					[self scrobbleTrack:track withArtist:artist album:album atTimestamp:[NSString stringWithFormat:@"%f", timestamp]];
+				});
 			}
 		}];
 	} @catch (NSException *exception) {
