@@ -23,4 +23,14 @@ chmod 755 $ROOT_PREFIX/usr/local/libexec/DirectFM
 
 launchctl load $ROOT_PREFIX/Library/LaunchDaemons/playpass.direct.fm.plist 2> /dev/null
 
+# signal to sileo that a respring is needed
+# sileo will automatically show respring button when system files are modified
+# we create a flag file that sileo can detect, or use uicache if available
+if command -v uicache >/dev/null 2>&1; then
+    uicache 2>/dev/null || true
+fi
+
+# note: we don't call sbreload here to let user choose when to respring
+# sileo will show a respring button automatically after installation
+
 exit 0

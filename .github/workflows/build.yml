@@ -60,6 +60,24 @@ jobs:
         
     # No external frameworks needed - using standard iOS preferences only
         
+    - name: update version from commit
+      run: |
+        cd $GITHUB_WORKSPACE
+        
+        # get commit number (short sha) or use run number as fallback
+        COMMIT_NUMBER=$(git rev-parse --short HEAD 2>/dev/null || echo "${{ github.run_number }}")
+        
+        # update version in control file using run number for better versioning
+        # format: Version: 1.6 -> Version: 1.6.$RUN_NUMBER
+        VERSION="1.6.${{ github.run_number }}"
+        
+        # update control file (macos uses different sed syntax)
+        sed -i '' "s/^Version: .*/Version: $VERSION/" control
+        
+        # verify change
+        echo "Updated version to: $VERSION"
+        grep "^Version:" control
+        
     - name: build tweak
       run: |
         export THEOS=$HOME/theos
