@@ -398,8 +398,23 @@ NSString *cleanString(NSString *input) {
 		@"method": @"track.updateNowPlaying",
 	} mutableCopy];
 
+	// check if logged in before updating now playing
+	if (!self.loggedIn || !self.token) {
+		NSLog(@"[Direct.FM] updateNowPlaying: Not logged in (loggedIn: %d, token: %@), cannot update now playing", self.loggedIn, self.token ? @"exists" : @"nil");
+		return;
+	}
+	
 	[self requestLastfm:dict completionHandler:^(NSData *data, NSHTTPURLResponse *response, NSError *error){
-		NSLog(@"[Direct.FM] Updated now playing track to %@", cleanedTrack);
+		if (error) {
+			NSLog(@"[Direct.FM] Failed to update now playing: %@ - Error: %@", cleanedTrack, error);
+		} else if (!response) {
+			NSLog(@"[Direct.FM] Failed to update now playing: %@ - No response", cleanedTrack);
+		} else if (response.statusCode != 200) {
+			NSString *responseData = data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"No data";
+			NSLog(@"[Direct.FM] Failed to update now playing: %@ - Status: %ld, Response: %@", cleanedTrack, (long)response.statusCode, responseData);
+		} else {
+			NSLog(@"[Direct.FM] Successfully updated now playing track to %@", cleanedTrack);
+		}
 	}];
 } 
 
@@ -636,12 +651,6 @@ NSString *cleanString(NSString *input) {
 		}
 		
 		NSLog(@"[Direct.FM] App %@ (%@) is in selected apps, proceeding with scrobble", appName, appBID);
-		
-		// check if logged in
-		if (!self.loggedIn || !self.token) {
-			NSLog(@"[Direct.FM] musicDidChange: Not logged in (loggedIn: %d, token: %@), cannot scrobble", self.loggedIn, self.token ? @"exists" : @"nil");
-			return;
-		}
 
 		[self getCurrentlyPlayingMusicWithcompletionHandler:^(NSString *track, NSString *artist, NSString *album, NSDate *date, NSNumber *duration){
 			if (!track || !artist || !album) {
@@ -650,8 +659,16 @@ NSString *cleanString(NSString *input) {
 			}
 			
 			NSLog(@"[Direct.FM] musicDidChange: Got track info - Track: %@, Artist: %@, Album: %@, Duration: %@", track, artist, album, duration);
+			NSLog(@"[Direct.FM] musicDidChange: Login status - loggedIn: %d, token: %@", self.loggedIn, self.token ? @"exists" : @"nil");
 			
+			// always try to update now playing (will fail gracefully if not logged in)
 			[self updateNowPlaying:track withArtist:artist album:album];
+			
+			// only proceed with scrobble scheduling if logged in
+			if (!self.loggedIn || !self.token) {
+				NSLog(@"[Direct.FM] musicDidChange: Not logged in, skipping scrobble scheduling");
+				return;
+			}
 
 			// only schedule scrobble if we have valid duration
 			if (duration && [duration isKindOfClass:[NSNumber class]]) {
@@ -781,8 +798,9 @@ NSString *cleanString(NSString *input) {
 	OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)req, &result);
 	if (status == errSecSuccess && result != NULL) {
 		self.token = [[NSString alloc] initWithData:(__bridge NSData*)result encoding:NSUTF8StringEncoding];
+		self.loggedIn = true; // set logged in flag when token is loaded
         [self registerObserver];
-		NSLog(@"[Direct.FM] Found token in keychain!");
+		NSLog(@"[Direct.FM] Found token in keychain! Logged in: %d", self.loggedIn);
 
 		CFRelease(result);
 
