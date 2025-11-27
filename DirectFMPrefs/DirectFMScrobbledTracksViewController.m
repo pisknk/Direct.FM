@@ -95,18 +95,6 @@
     UITableView *_tableView;
 }
 
-- (instancetype)init {
-    self = [super init];
-    if (self) {
-        // set identifier for Settings search
-        PSSpecifier *spec = [[PSSpecifier alloc] init];
-        [spec setProperty:@"DirectFMScrobbledTracks" forKey:@"PSIDKey"];
-        [spec setProperty:@"DirectFMScrobbledTracks" forKey:@"identifier"];
-        [self setSpecifier:spec];
-    }
-    return self;
-}
-
 - (void)loadView {
     // create our own view instead of using PSListController's
     self.view = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
@@ -403,10 +391,6 @@
         UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"Unscrobbled" message:[NSString stringWithFormat:@"Removed \"%@\" by %@ from your scrobbles", trackName, artist] delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil];
         [alert show];
     }
-}
-
-- (NSArray *)specifiers {
-    return nil; // we're using a custom table view instead
 }
 
 @end

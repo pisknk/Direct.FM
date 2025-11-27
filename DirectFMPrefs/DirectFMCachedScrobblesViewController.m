@@ -78,18 +78,6 @@
     UITableView *_tableView;
 }
 
-- (instancetype)init {
-    self = [super init];
-    if (self) {
-        // set identifier for Settings search
-        PSSpecifier *spec = [[PSSpecifier alloc] init];
-        [spec setProperty:@"DirectFMCachedScrobbles" forKey:@"PSIDKey"];
-        [spec setProperty:@"DirectFMCachedScrobbles" forKey:@"identifier"];
-        [self setSpecifier:spec];
-    }
-    return self;
-}
-
 - (void)loadView {
     // create our own view instead of using PSListController's
     self.view = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
@@ -319,10 +307,6 @@
             [alert show];
         }
     }
-}
-
-- (NSArray *)specifiers {
-    return nil; // we're using a custom table view instead
 }
 
 @end
